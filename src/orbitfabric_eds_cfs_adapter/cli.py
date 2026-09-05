@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import argparse
 import sys
-
 
 OPERATION = "eds_cfs_projection"
 
