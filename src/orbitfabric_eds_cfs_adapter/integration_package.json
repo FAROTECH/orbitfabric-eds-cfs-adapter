@@ -1,0 +1,61 @@
+{
+  "adapter": {
+    "id": "orbitfabric-eds-cfs",
+    "version": "0.1.0.dev0"
+  },
+  "capabilities": [
+    "profile_validation",
+    "projection",
+    "artifact_generation",
+    "traceability"
+  ],
+  "core_input_compatibility": {
+    "input_set_versions": [
+      "0.1-candidate"
+    ],
+    "relationship_families": [],
+    "surfaces": []
+  },
+  "execution": {
+    "argv_prefix": [
+      "orbitfabric-eds-cfs"
+    ],
+    "protocol": "orbitfabric.adapter_cli.v1"
+  },
+  "integration": {
+    "id": "orbitfabric-eds-cfs"
+  },
+  "kind": "orbitfabric.integration_package",
+  "manifest_version": "0.2-candidate",
+  "operations": [
+    {
+      "capabilities": [
+        "profile_validation",
+        "projection",
+        "artifact_generation",
+        "traceability"
+      ],
+      "id": "eds_cfs_projection",
+      "input_requirements": []
+    }
+  ],
+  "profile_compatibility": {
+    "profile_versions": [
+      "0.1-candidate"
+    ]
+  },
+  "profile_schemas": [
+    {
+      "format": "json-schema-2020-12",
+      "path": "schemas/profile-0.1.schema.json",
+      "schema_version": "0.1-candidate",
+      "sha256": "5f570c5c30c23fc71ea63820507541230593a68d926da3c53c76f14251ca2b6d"
+    }
+  ],
+  "result_compatibility": {
+    "default_result_version": "0.2-candidate",
+    "result_versions": [
+      "0.2-candidate"
+    ]
+  }
+}
