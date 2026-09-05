@@ -100,7 +100,10 @@ def _packet_membership(core: LoadedInputSet, packet_id: str) -> set[str]:
         raise ResolutionError(str(exc)) from exc
 
 
-def _command_arguments(core: LoadedInputSet, command_id: str) -> tuple[ResolvedCommandArgument, ...]:
+def _command_arguments(
+    core: LoadedInputSet,
+    command_id: str,
+) -> tuple[ResolvedCommandArgument, ...]:
     command = _model_record(core, "commands", command_id)
     arguments = command.get("arguments")
     if not isinstance(arguments, list):
@@ -119,7 +122,9 @@ def _command_arguments(core: LoadedInputSet, command_id: str) -> tuple[ResolvedC
         enum = argument.get("enum")
         if enum is not None:
             if not isinstance(enum, list) or not all(isinstance(item, str) for item in enum):
-                raise ResolutionError(f"Core command argument has invalid enum: {command_id}/{name}")
+                raise ResolutionError(
+                    f"Core command argument has invalid enum: {command_id}/{name}"
+                )
             resolved_enum: tuple[str, ...] | None = tuple(enum)
         else:
             resolved_enum = None
