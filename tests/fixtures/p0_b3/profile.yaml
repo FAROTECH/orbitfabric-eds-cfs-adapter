@@ -1,0 +1,54 @@
+kind: orbitfabric.projection_profile
+profile_version: 0.1-candidate
+
+profile:
+  id: eds-cfs-p0
+  version: 0.1.0
+  description: P0 EDS-cFS projection profile
+
+integration:
+  id: orbitfabric-eds-cfs
+  schema_version: 0.1-candidate
+
+settings:
+  eds:
+    package_name: OF_DEMO
+    component_name: Application
+  interfaces:
+    command:
+      name: CMD
+      topic_id: 160
+    telemetry:
+      name: STATUS_TLM
+      topic_id: 161
+
+bindings:
+  - id: cmd.payload-enable
+    intent: project
+    sources:
+      - domain: commands
+        id: payload.enable
+    config:
+      function_code: 0
+
+  - id: cmd.payload-set-period
+    intent: project
+    sources:
+      - domain: commands
+        id: payload.set_period
+    config:
+      function_code: 1
+
+  - id: packet.payload-status
+    intent: project
+    sources:
+      - domain: packets
+        id: payload_status
+    config:
+      fields:
+        - source:
+            domain: telemetry
+            id: payload.enabled
+        - source:
+            domain: telemetry
+            id: payload.sample_count
