@@ -44,6 +44,16 @@ jobs:
             --profile tests/fixtures/p0_b3/profile.yaml \
             --output-dir /tmp/eds-cfs-b8-output
 
+      - name: Report B7 and B8 reacceptance candidates
+        run: |
+          for path in \
+            /tmp/eds-cfs-b8-output/eds/mission.xml \
+            /tmp/eds-cfs-b8-output/traceability.json \
+            /tmp/eds-cfs-b8-output/integration_result.json; do
+            wc -c "$path"
+            sha256sum "$path"
+          done
+
       - name: Validate Result with exact Core v1 conformance checker
         run: |
           python -m orbitfabric.conformance.integration_contracts result \
@@ -140,6 +150,7 @@ jobs:
           PY
 
       - name: Upload B8 successful integration bundle
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: eds-cfs-p0-b8-integration-bundle

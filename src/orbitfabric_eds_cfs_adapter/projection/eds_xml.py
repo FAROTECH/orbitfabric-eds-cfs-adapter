@@ -3,7 +3,11 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from orbitfabric_eds_cfs_adapter.projection.model import EdsProjectionModel
+from orbitfabric_eds_cfs_adapter.projection.model import (
+    BOOLEAN8_SIZE_BITS,
+    BOOLEAN8_TYPE,
+    EdsProjectionModel,
+)
 
 EDS_NAMESPACE = "http://www.ccsds.org/schema/sois/seds"
 XML_DECLARATION = b'<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -49,6 +53,14 @@ def _serialize_container(parent: ET.Element, container) -> None:
                 ET.SubElement(valid_range, "MinMaxRange", range_attributes)
 
 
+def _uses_boolean8(model: EdsProjectionModel) -> bool:
+    return any(
+        entry.type_ref == BOOLEAN8_TYPE
+        for datatype in model.datatypes
+        for entry in datatype.entries
+    )
+
+
 def serialize_eds_xml(model: EdsProjectionModel) -> bytes:
     """Serialize one accepted B5 model into deterministic P0 EDS XML bytes."""
 
@@ -56,6 +68,18 @@ def serialize_eds_xml(model: EdsProjectionModel) -> bytes:
     package = ET.SubElement(root, "Package", {"name": model.package_name})
 
     data_type_set = ET.SubElement(package, "DataTypeSet")
+    if _uses_boolean8(model):
+        boolean_type = ET.SubElement(
+            data_type_set,
+            "BooleanDataType",
+            {"name": BOOLEAN8_TYPE},
+        )
+        ET.SubElement(
+            boolean_type,
+            "BooleanDataEncoding",
+            {"sizeInBits": str(BOOLEAN8_SIZE_BITS)},
+        )
+
     for container in model.datatypes:
         _serialize_container(data_type_set, container)
 
