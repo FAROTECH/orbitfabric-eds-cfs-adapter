@@ -13,8 +13,39 @@
     "input_set_versions": [
       "0.1-candidate"
     ],
-    "relationship_families": [],
-    "surfaces": []
+    "relationship_families": [
+      "packet_includes_telemetry"
+    ],
+    "surfaces": [
+      {
+        "format_versions": [
+          "0.1"
+        ],
+        "kind": "orbitfabric.entity_index",
+        "role": "entity_index"
+      },
+      {
+        "format_versions": [
+          "v1"
+        ],
+        "kind": "orbitfabric-lint",
+        "role": "lint_report"
+      },
+      {
+        "format_versions": [
+          "0.1-candidate"
+        ],
+        "kind": "orbitfabric.mission_snapshot",
+        "role": "mission_snapshot"
+      },
+      {
+        "format_versions": [
+          "0.1-candidate"
+        ],
+        "kind": "orbitfabric.relationship_manifest",
+        "role": "relationship_manifest"
+      }
+    ]
   },
   "execution": {
     "argv_prefix": [
