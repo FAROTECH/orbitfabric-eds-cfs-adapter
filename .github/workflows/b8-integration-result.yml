@@ -1,0 +1,146 @@
+name: B8 Integration Result
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  b8-integration-result:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install adapter and exact OrbitFabric Core 1.3.0 baseline
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install "orbitfabric @ git+https://github.com/FAROTECH/orbitfabric.git@a25917e81c90396df2b189834e83cf852fa4da5f"
+
+      - name: Materialize deterministic P0 mission workspace
+        run: |
+          rm -rf /tmp/orbitfabric-eds-cfs-p0-mission
+          mkdir -p /tmp/orbitfabric-eds-cfs-p0-mission
+          cp -a tests/fixtures/p0_b1/mission/. /tmp/orbitfabric-eds-cfs-p0-mission/
+
+      - name: Generate exact Core Integration Input Set
+        run: |
+          rm -rf /tmp/eds-cfs-b8-core-input
+          orbitfabric export integration-input-set /tmp/orbitfabric-eds-cfs-p0-mission \
+            --output-dir /tmp/eds-cfs-b8-core-input
+
+      - name: Execute public B8 adapter entry point
+        run: |
+          rm -rf /tmp/eds-cfs-b8-output
+          orbitfabric-eds-cfs run \
+            --operation eds_cfs_projection \
+            --input-set-manifest /tmp/eds-cfs-b8-core-input/integration_input_manifest.json \
+            --profile tests/fixtures/p0_b3/profile.yaml \
+            --output-dir /tmp/eds-cfs-b8-output
+
+      - name: Validate Result with exact Core v1 conformance checker
+        run: |
+          python -m orbitfabric.conformance.integration_contracts result \
+            src/orbitfabric_eds_cfs_adapter/integration_package.json \
+            /tmp/eds-cfs-b8-output/integration_result.json
+
+      - name: Audit B8 bundle, provenance, traceability reuse and coverage
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("/tmp/eds-cfs-b8-output")
+          result_path = root / "integration_result.json"
+          trace_path = root / "traceability.json"
+          eds_path = root / "eds" / "mission.xml"
+          profile_path = Path("tests/fixtures/p0_b3/profile.yaml")
+
+          expected_files = {
+              "eds/mission.xml",
+              "traceability.json",
+              "integration_result.json",
+          }
+          actual_files = {
+              path.relative_to(root).as_posix()
+              for path in root.rglob("*")
+              if path.is_file()
+          }
+          assert actual_files == expected_files
+
+          result = json.loads(result_path.read_text(encoding="utf-8"))
+          trace = json.loads(trace_path.read_text(encoding="utf-8"))
+
+          assert result["kind"] == "orbitfabric.integration_result"
+          assert result["result_version"] == "0.2-candidate"
+          assert result["result"] == "succeeded"
+          assert result["operation"] == {"id": "eds_cfs_projection"}
+          assert result["inputs"]["operation_inputs"] == []
+          assert result["inputs"]["core_input_set"]["sha256"] == (
+              "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98"
+          )
+          assert result["inputs"]["profile"]["sha256"] == hashlib.sha256(
+              profile_path.read_bytes()
+          ).hexdigest()
+          assert result["inputs"]["profile"]["sha256"] == (
+              "f8e380f165d15cebb8ccdd83c00791ffa4414102887fcbc934332c4189a43350"
+          )
+
+          assert result["capabilities"] == [
+              "artifact_generation",
+              "profile_validation",
+              "projection",
+              "traceability",
+          ]
+          assert result["diagnostics"] == []
+          assert result["evidence"] == []
+          assert result["external_tools"] == []
+
+          assert result["mappings"] == trace["mappings"]
+          assert result["resolutions"] == trace["resolutions"]
+
+          coverage = result["coverage"]
+          assert coverage["status"] == "complete"
+          assert coverage["scope"] == {
+              "domains": ["commands", "packets", "telemetry"]
+          }
+          assert coverage["summary"] == {"projected": 5}
+          assert len(coverage["records"]) == 5
+          assert all(record["state"] == "projected" for record in coverage["records"])
+
+          artifacts = {item["id"]: item for item in result["artifacts"]}
+          assert artifacts["eds.package"]["sha256"] == hashlib.sha256(
+              eds_path.read_bytes()
+          ).hexdigest()
+          assert artifacts["traceability"]["sha256"] == hashlib.sha256(
+              trace_path.read_bytes()
+          ).hexdigest()
+          assert artifacts["eds.package"]["sha256"] == (
+              "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
+          )
+          assert artifacts["traceability"]["sha256"] == (
+              "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e"
+          )
+
+          result_bytes = result_path.read_bytes()
+          print(f"B8 Integration Result size: {len(result_bytes)} bytes")
+          print(
+              "B8 Integration Result sha256: "
+              + hashlib.sha256(result_bytes).hexdigest()
+          )
+          print("B8 Core-conformant Integration Result: PASS")
+          PY
+
+      - name: Upload B8 successful integration bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p0-b8-integration-bundle
+          path: /tmp/eds-cfs-b8-output
+          if-no-files-found: error
