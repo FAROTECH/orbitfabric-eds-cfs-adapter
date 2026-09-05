@@ -1,0 +1,334 @@
+{
+  "artifact": {
+    "component": "Application",
+    "id": "eds.package",
+    "kind": "ccsds.sois.eds.xml",
+    "media_type": "application/xml",
+    "package": "OF_DEMO",
+    "sha256": "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
+  },
+  "integration": {
+    "id": "orbitfabric-eds-cfs",
+    "schema_version": "0.1-candidate"
+  },
+  "kind": "orbitfabric.eds_cfs.traceability",
+  "mappings": [
+    {
+      "id": "mapping.commands.payload.enable",
+      "profile_bindings": [
+        "cmd.payload-enable"
+      ],
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.enable"
+        }
+      ],
+      "targets": [
+        {
+          "id": "OF_DEMO/Application",
+          "kind": "component",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadEnableCmd",
+          "kind": "container_type",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/Application/CMD",
+          "kind": "interface",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO",
+          "kind": "package",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/Application/CMDTopicId",
+          "kind": "variable",
+          "namespace": "cfs-eds"
+        }
+      ]
+    },
+    {
+      "id": "mapping.commands.payload.set_period",
+      "profile_bindings": [
+        "cmd.payload-set-period"
+      ],
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "targets": [
+        {
+          "id": "OF_DEMO/Application",
+          "kind": "component",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadSetPeriodCmd",
+          "kind": "container_type",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadSetPeriod_Payload",
+          "kind": "container_type",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadSetPeriod_Payload/PeriodMs",
+          "kind": "entry",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/Application/CMD",
+          "kind": "interface",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO",
+          "kind": "package",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/Application/CMDTopicId",
+          "kind": "variable",
+          "namespace": "cfs-eds"
+        }
+      ]
+    },
+    {
+      "id": "mapping.packets.payload_status",
+      "profile_bindings": [
+        "packet.payload-status"
+      ],
+      "sources": [
+        {
+          "domain": "packets",
+          "id": "payload_status"
+        }
+      ],
+      "targets": [
+        {
+          "id": "OF_DEMO/Application",
+          "kind": "component",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadStatusTlm",
+          "kind": "container_type",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadStatusTlm_Payload",
+          "kind": "container_type",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/Application/STATUS_TLM",
+          "kind": "interface",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO",
+          "kind": "package",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/Application/STATUSTLMTopicId",
+          "kind": "variable",
+          "namespace": "cfs-eds"
+        }
+      ]
+    },
+    {
+      "id": "mapping.telemetry.payload.enabled",
+      "profile_bindings": [
+        "packet.payload-status"
+      ],
+      "sources": [
+        {
+          "domain": "telemetry",
+          "id": "payload.enabled"
+        }
+      ],
+      "targets": [
+        {
+          "id": "OF_DEMO/PayloadStatusTlm_Payload",
+          "kind": "container_type",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadStatusTlm_Payload/PayloadEnabled",
+          "kind": "entry",
+          "namespace": "cfs-eds"
+        }
+      ]
+    },
+    {
+      "id": "mapping.telemetry.payload.sample_count",
+      "profile_bindings": [
+        "packet.payload-status"
+      ],
+      "sources": [
+        {
+          "domain": "telemetry",
+          "id": "payload.sample_count"
+        }
+      ],
+      "targets": [
+        {
+          "id": "OF_DEMO/PayloadStatusTlm_Payload",
+          "kind": "container_type",
+          "namespace": "cfs-eds"
+        },
+        {
+          "id": "OF_DEMO/PayloadStatusTlm_Payload/PayloadSampleCount",
+          "kind": "entry",
+          "namespace": "cfs-eds"
+        }
+      ]
+    }
+  ],
+  "profile": {
+    "id": "eds-cfs-p0",
+    "version": "0.1.0"
+  },
+  "resolutions": [
+    {
+      "binding": "cmd.payload-enable",
+      "id": "resolution.commands.payload.enable.command_topic_id",
+      "mapping": "mapping.commands.payload.enable",
+      "origin": "profile",
+      "property": "cfs.command_topic_id",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.enable"
+        }
+      ],
+      "value": 160
+    },
+    {
+      "binding": "cmd.payload-enable",
+      "id": "resolution.commands.payload.enable.function_code",
+      "mapping": "mapping.commands.payload.enable",
+      "origin": "profile",
+      "property": "cfs.function_code",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.enable"
+        }
+      ],
+      "value": 0
+    },
+    {
+      "binding": "cmd.payload-set-period",
+      "id": "resolution.commands.payload.set_period.argument.period_ms.type_ref",
+      "mapping": "mapping.commands.payload.set_period",
+      "origin": "core",
+      "property": "eds.argument.period_ms.type_ref",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "value": "BASE_TYPES/uint32"
+    },
+    {
+      "binding": "cmd.payload-set-period",
+      "id": "resolution.commands.payload.set_period.argument.period_ms.valid_range",
+      "mapping": "mapping.commands.payload.set_period",
+      "origin": "core",
+      "property": "eds.argument.period_ms.valid_range",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "value": {
+        "maximum": 60000,
+        "minimum": 100,
+        "range_type": "inclusiveMinInclusiveMax"
+      }
+    },
+    {
+      "binding": "cmd.payload-set-period",
+      "id": "resolution.commands.payload.set_period.command_topic_id",
+      "mapping": "mapping.commands.payload.set_period",
+      "origin": "profile",
+      "property": "cfs.command_topic_id",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "value": 160
+    },
+    {
+      "binding": "cmd.payload-set-period",
+      "id": "resolution.commands.payload.set_period.function_code",
+      "mapping": "mapping.commands.payload.set_period",
+      "origin": "profile",
+      "property": "cfs.function_code",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "value": 1
+    },
+    {
+      "binding": "packet.payload-status",
+      "id": "resolution.packets.payload_status.telemetry_topic_id",
+      "mapping": "mapping.packets.payload_status",
+      "origin": "profile",
+      "property": "cfs.telemetry_topic_id",
+      "sources": [
+        {
+          "domain": "packets",
+          "id": "payload_status"
+        }
+      ],
+      "value": 161
+    },
+    {
+      "binding": "packet.payload-status",
+      "id": "resolution.telemetry.payload.enabled.type_ref",
+      "mapping": "mapping.telemetry.payload.enabled",
+      "origin": "core",
+      "property": "eds.type_ref",
+      "sources": [
+        {
+          "domain": "telemetry",
+          "id": "payload.enabled"
+        }
+      ],
+      "value": "BASE_TYPES/StatusBit"
+    },
+    {
+      "binding": "packet.payload-status",
+      "id": "resolution.telemetry.payload.sample_count.type_ref",
+      "mapping": "mapping.telemetry.payload.sample_count",
+      "origin": "core",
+      "property": "eds.type_ref",
+      "sources": [
+        {
+          "domain": "telemetry",
+          "id": "payload.sample_count"
+        }
+      ],
+      "value": "BASE_TYPES/uint32"
+    }
+  ],
+  "traceability_version": "0.1-candidate"
+}
