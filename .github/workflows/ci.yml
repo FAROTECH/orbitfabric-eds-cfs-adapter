@@ -331,9 +331,9 @@ jobs:
 
           validate_traceability(traceability)
           assert actual == expected
-          assert len(actual) == 8426
+          assert len(actual) == 9198
           assert hashlib.sha256(actual).hexdigest() == (
-              "43d490ca64458f6166f1307e56dad77a0032941168463bcef78beea153e729d2"
+              "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e"
           )
           assert traceability["artifact"]["sha256"] == (
               "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
