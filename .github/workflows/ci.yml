@@ -167,6 +167,58 @@ jobs:
           print("B2 loader against real Core B1 output: PASS")
           PY
 
+      - name: Resolve real B3 Profile against real B1 Core set
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          from orbitfabric_eds_cfs_adapter.input_set import load_input_set
+          from orbitfabric_eds_cfs_adapter.profile import load_profile
+          from orbitfabric_eds_cfs_adapter.projection.resolution import resolve_profile
+
+          root = Path("/tmp/eds-cfs-b1-integration-input")
+          core = load_input_set(root / "integration_input_manifest.json")
+          profile = load_profile(Path("tests/fixtures/p0_b3/profile.yaml"))
+          resolved = resolve_profile(profile, core)
+
+          assert resolved.package_name == "OF_DEMO"
+          assert resolved.component_name == "Application"
+          assert (resolved.command_interface.name, resolved.command_interface.topic_id) == (
+              "CMD",
+              160,
+          )
+          assert (resolved.telemetry_interface.name, resolved.telemetry_interface.topic_id) == (
+              "STATUS_TLM",
+              161,
+          )
+          assert [(item.source_id, item.function_code) for item in resolved.commands] == [
+              ("payload.enable", 0),
+              ("payload.set_period", 1),
+          ]
+          assert resolved.commands[1].command["arguments"] == [
+              {
+                  "name": "period_ms",
+                  "type": "uint32",
+                  "min": 100,
+                  "max": 60000,
+                  "enum": None,
+                  "default": None,
+                  "description": None,
+              }
+          ]
+          assert [field.source_id for field in resolved.packets[0].fields] == [
+              "payload.enabled",
+              "payload.sample_count",
+          ]
+          assert [field.telemetry["type"] for field in resolved.packets[0].fields] == [
+              "bool",
+              "uint32",
+          ]
+          assert len(resolved.lint_warnings) == 6
+
+          print("B4 real Profile/Core resolution: PASS")
+          PY
+
       - name: Print B1 generated set for review
         run: |
           for file in integration_input_manifest.json mission_snapshot.json entity_index.json relationship_manifest.json lint_report.json model_summary.json; do
