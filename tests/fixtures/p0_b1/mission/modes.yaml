@@ -1,0 +1,6 @@
+modes:
+  NOMINAL:
+    description: Minimal operational mode for the P0 mission slice.
+    initial: true
+
+mode_transitions: []

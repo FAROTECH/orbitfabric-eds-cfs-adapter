@@ -1,0 +1,7 @@
+spacecraft:
+  id: eds-cfs-p0
+  name: EDS-cFS P0 Mission Slice
+  class: testbed
+  form_factor: software
+  mission_type: integration_proof
+  model_version: 0.1.0
