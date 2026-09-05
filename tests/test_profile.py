@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from jsonschema import ValidationError
 import pytest
+from jsonschema import ValidationError
 
 from orbitfabric_eds_cfs_adapter.profile import load_profile
 
