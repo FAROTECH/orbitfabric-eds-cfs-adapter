@@ -268,6 +268,39 @@ jobs:
           print("B5 real internal projection model: PASS")
           PY
 
+      - name: Serialize B6 XML from real B5 model
+        run: |
+          python - <<'PY'
+          import hashlib
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          from orbitfabric_eds_cfs_adapter.input_set import load_input_set
+          from orbitfabric_eds_cfs_adapter.profile import load_profile
+          from orbitfabric_eds_cfs_adapter.projection.eds_xml import serialize_eds_xml
+          from orbitfabric_eds_cfs_adapter.projection.model import build_projection_model
+          from orbitfabric_eds_cfs_adapter.projection.resolution import resolve_profile
+
+          root = Path("/tmp/eds-cfs-b1-integration-input")
+          core = load_input_set(root / "integration_input_manifest.json")
+          profile = load_profile(Path("tests/fixtures/p0_b3/profile.yaml"))
+          model = build_projection_model(resolve_profile(profile, core))
+          actual = serialize_eds_xml(model)
+          expected = Path("tests/fixtures/p0_b6/expected.xml").read_bytes()
+
+          assert actual == expected
+          assert len(actual) == 2821
+          assert hashlib.sha256(actual).hexdigest() == (
+              "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
+          )
+          parsed = ET.fromstring(actual)
+          assert parsed.tag == "{http://www.ccsds.org/schema/sois/seds}PackageFile"
+
+          output = Path("/tmp/eds-cfs-p0.xml")
+          output.write_bytes(actual)
+          print("B6 real deterministic EDS XML: PASS")
+          PY
+
       - name: Print B1 generated set for review
         run: |
           for file in integration_input_manifest.json mission_snapshot.json entity_index.json relationship_manifest.json lint_report.json model_summary.json; do
@@ -282,4 +315,11 @@ jobs:
         with:
           name: eds-cfs-p0-b1-core-integration-input
           path: /tmp/eds-cfs-b1-integration-input
+          if-no-files-found: error
+
+      - name: Upload B6 EDS XML
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p0-b6-eds-xml
+          path: /tmp/eds-cfs-p0.xml
           if-no-files-found: error
