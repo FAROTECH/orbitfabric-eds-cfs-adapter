@@ -37,12 +37,17 @@ def _core() -> LoadedInputSet:
                             "type": "uint32",
                             "min": 100,
                             "max": 60000,
+                            "description": "Must not leak into the B4 resolved contract",
                         }
                     ],
                 },
             ],
             "telemetry": [
-                {"id": "payload.enabled", "type": "bool"},
+                {
+                    "id": "payload.enabled",
+                    "type": "bool",
+                    "description": "Must not leak into the B4 resolved contract",
+                },
                 {"id": "payload.sample_count", "type": "uint32"},
                 {"id": "payload.temperature", "type": "float32"},
             ],
@@ -100,18 +105,28 @@ def test_canonical_profile_resolves_against_core() -> None:
         ("payload.enable", 0),
         ("payload.set_period", 1),
     ]
-    assert resolved.commands[1].command["arguments"] == [
-        {"name": "period_ms", "type": "uint32", "min": 100, "max": 60000}
-    ]
+    assert resolved.commands[1].arguments[0].name == "period_ms"
+    assert resolved.commands[1].arguments[0].semantic_type == "uint32"
+    assert resolved.commands[1].arguments[0].minimum == 100
+    assert resolved.commands[1].arguments[0].maximum == 60000
     assert [field.source_id for field in resolved.packets[0].fields] == [
         "payload.enabled",
         "payload.sample_count",
     ]
-    assert [field.telemetry["type"] for field in resolved.packets[0].fields] == [
+    assert [field.semantic_type for field in resolved.packets[0].fields] == [
         "bool",
         "uint32",
     ]
     assert len(resolved.lint_warnings) == 6
+
+
+def test_resolved_boundary_does_not_leak_unfrozen_snapshot_fields() -> None:
+    resolved = resolve_profile(_profile(), _core())
+
+    argument = resolved.commands[1].arguments[0]
+    field = resolved.packets[0].fields[0]
+    assert not hasattr(argument, "description")
+    assert not hasattr(field, "description")
 
 
 def test_packet_field_order_is_profile_owned_not_relationship_order() -> None:
