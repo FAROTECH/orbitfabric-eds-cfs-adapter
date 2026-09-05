@@ -8,6 +8,7 @@ import pytest
 
 from orbitfabric_eds_cfs_adapter.projection.eds_xml import serialize_eds_xml
 from orbitfabric_eds_cfs_adapter.projection.model import (
+    EdsEntry,
     EdsValueConstraint,
     build_projection_model,
 )
@@ -29,7 +30,7 @@ from orbitfabric_eds_cfs_adapter.projection.traceability import (
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b7" / "expected.json"
-EXPECTED_SHA256 = "43d490ca64458f6166f1307e56dad77a0032941168463bcef78beea153e729d2"
+EXPECTED_SHA256 = "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e"
 EXPECTED_B6_SHA256 = "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
 
 
@@ -100,6 +101,13 @@ def _resolution(payload, resolution_id: str):
     return next(item for item in payload["resolutions"] if item["id"] == resolution_id)
 
 
+def _replace_datatype(model, name: str, replacement):
+    datatypes = list(model.datatypes)
+    index = next(index for index, item in enumerate(datatypes) if item.name == name)
+    datatypes[index] = replacement(datatypes[index])
+    return replace(model, datatypes=tuple(datatypes))
+
+
 def test_traceability_matches_retained_golden_bytes() -> None:
     resolved, model, xml = _stages()
     payload = build_traceability(resolved, model, xml)
@@ -148,7 +156,7 @@ def test_all_frozen_core_sources_have_explicit_mappings() -> None:
     )
 
 
-def test_command_mapping_and_resolutions_are_explicit() -> None:
+def test_command_mapping_and_resolution_provenance_are_explicit() -> None:
     resolved, model, xml = _stages()
     payload = build_traceability(resolved, model, xml)
 
@@ -162,26 +170,45 @@ def test_command_mapping_and_resolutions_are_explicit() -> None:
         "OF_DEMO/Application/CMDTopicId",
     }
 
-    assert _resolution(
+    function_code = _resolution(
         payload,
         "resolution.commands.payload.set_period.function_code",
-    )["value"] == 1
-    assert _resolution(
+    )
+    assert (function_code["value"], function_code["origin"]) == (1, "profile")
+
+    topic_id = _resolution(
         payload,
         "resolution.commands.payload.set_period.command_topic_id",
-    )["value"] == 160
-    assert _resolution(
+    )
+    assert (topic_id["value"], topic_id["origin"]) == (160, "profile")
+
+    type_ref = _resolution(
         payload,
         "resolution.commands.payload.set_period.argument.period_ms.type_ref",
-    )["value"] == "BASE_TYPES/uint32"
-    assert _resolution(
+    )
+    assert (type_ref["value"], type_ref["origin"]) == (
+        "BASE_TYPES/uint32",
+        "adapter_default",
+    )
+
+    minimum = _resolution(
         payload,
-        "resolution.commands.payload.set_period.argument.period_ms.valid_range",
-    )["value"] == {
-        "minimum": 100,
-        "maximum": 60000,
-        "range_type": "inclusiveMinInclusiveMax",
-    }
+        "resolution.commands.payload.set_period.argument.period_ms.minimum",
+    )
+    maximum = _resolution(
+        payload,
+        "resolution.commands.payload.set_period.argument.period_ms.maximum",
+    )
+    range_type = _resolution(
+        payload,
+        "resolution.commands.payload.set_period.argument.period_ms.range_type",
+    )
+    assert (minimum["value"], minimum["origin"]) == (100, "core")
+    assert (maximum["value"], maximum["origin"]) == (60000, "core")
+    assert (range_type["value"], range_type["origin"]) == (
+        "inclusiveMinInclusiveMax",
+        "adapter_default",
+    )
 
 
 def test_packet_and_telemetry_traceability_are_explicit() -> None:
@@ -207,10 +234,14 @@ def test_packet_and_telemetry_traceability_are_explicit() -> None:
         "OF_DEMO/PayloadStatusTlm_Payload",
         "OF_DEMO/PayloadStatusTlm_Payload/PayloadEnabled",
     }
-    assert _resolution(
+    enabled_type = _resolution(
         payload,
         "resolution.telemetry.payload.enabled.type_ref",
-    )["value"] == "BASE_TYPES/StatusBit"
+    )
+    assert (enabled_type["value"], enabled_type["origin"]) == (
+        "BASE_TYPES/StatusBit",
+        "adapter_default",
+    )
 
 
 def test_missing_b5_target_fails_closed() -> None:
@@ -228,20 +259,17 @@ def test_missing_b5_target_fails_closed() -> None:
 
 def test_function_code_mismatch_fails_closed() -> None:
     resolved, model, xml = _stages()
-    datatypes = list(model.datatypes)
-    index = next(
-        index
-        for index, item in enumerate(datatypes)
-        if item.name == "PayloadEnableCmd"
-    )
-    variant = datatypes[index]
-    datatypes[index] = replace(
-        variant,
-        constraints=(EdsValueConstraint(entry="Sec.FunctionCode", value=7),),
+    model = _replace_datatype(
+        model,
+        "PayloadEnableCmd",
+        lambda item: replace(
+            item,
+            constraints=(EdsValueConstraint(entry="Sec.FunctionCode", value=7),),
+        ),
     )
 
     with pytest.raises(TraceabilityError, match="Function Code mismatch"):
-        build_traceability(resolved, replace(model, datatypes=tuple(datatypes)), xml)
+        build_traceability(resolved, model, xml)
 
 
 def test_topic_id_mismatch_fails_closed() -> None:
@@ -253,24 +281,52 @@ def test_topic_id_mismatch_fails_closed() -> None:
         build_traceability(resolved, replace(model, interfaces=tuple(interfaces)), xml)
 
 
-def test_missing_telemetry_entry_fails_closed() -> None:
+def test_command_payload_link_mismatch_fails_closed() -> None:
     resolved, model, xml = _stages()
-    datatypes = list(model.datatypes)
-    index = next(
-        index
-        for index, item in enumerate(datatypes)
-        if item.name == "PayloadStatusTlm_Payload"
-    )
-    payload = datatypes[index]
-    datatypes[index] = replace(
-        payload,
-        entries=tuple(
-            item for item in payload.entries if item.name != "PayloadEnabled"
+    model = _replace_datatype(
+        model,
+        "PayloadSetPeriodCmd",
+        lambda item: replace(
+            item,
+            entries=(EdsEntry(name="Payload", type_ref="WrongPayload"),),
         ),
     )
 
+    with pytest.raises(TraceabilityError, match="Payload type mismatch"):
+        build_traceability(resolved, model, xml)
+
+
+def test_command_type_realization_mismatch_fails_closed() -> None:
+    resolved, model, xml = _stages()
+
+    def replace_period(payload):
+        period = payload.entries[0]
+        return replace(
+            payload,
+            entries=(replace(period, type_ref="BASE_TYPES/StatusBit"),),
+        )
+
+    model = _replace_datatype(model, "PayloadSetPeriod_Payload", replace_period)
+
+    with pytest.raises(TraceabilityError, match="type realization mismatch"):
+        build_traceability(resolved, model, xml)
+
+
+def test_missing_telemetry_entry_fails_closed() -> None:
+    resolved, model, xml = _stages()
+
+    def remove_enabled(payload):
+        return replace(
+            payload,
+            entries=tuple(
+                item for item in payload.entries if item.name != "PayloadEnabled"
+            ),
+        )
+
+    model = _replace_datatype(model, "PayloadStatusTlm_Payload", remove_enabled)
+
     with pytest.raises(TraceabilityError, match="PayloadEnabled"):
-        build_traceability(resolved, replace(model, datatypes=tuple(datatypes)), xml)
+        build_traceability(resolved, model, xml)
 
 
 def test_empty_b6_artifact_fails_closed() -> None:
