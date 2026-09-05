@@ -9,9 +9,12 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from orbitfabric_eds_cfs_adapter.projection.model import (
+    COMMAND_GENERIC_TYPE,
     COMMAND_INTERFACE_TYPE,
     FUNCTION_CODE_ENTRY,
+    TELEMETRY_GENERIC_TYPE,
     TELEMETRY_INTERFACE_TYPE,
+    TYPE_REFS,
     EdsContainerType,
     EdsEntry,
     EdsInterface,
@@ -19,7 +22,10 @@ from orbitfabric_eds_cfs_adapter.projection.model import (
     EdsVariable,
     eds_name_v1,
 )
-from orbitfabric_eds_cfs_adapter.projection.resolution import ResolvedProfile
+from orbitfabric_eds_cfs_adapter.projection.resolution import (
+    ResolvedCommandArgument,
+    ResolvedProfile,
+)
 
 TRACEABILITY_KIND = "orbitfabric.eds_cfs.traceability"
 TRACEABILITY_VERSION = "0.1-candidate"
@@ -172,6 +178,7 @@ def _verify_interface(
     resolved_name: str,
     resolved_topic_id: int,
     expected_type: str,
+    expected_generic_name: str,
     model: EdsProjectionModel,
 ) -> tuple[EdsInterface, EdsVariable]:
     interface = _interface(model, resolved_name)
@@ -179,6 +186,11 @@ def _verify_interface(
         raise TraceabilityError(
             f"B5 interface type mismatch for {resolved_name}: "
             f"{interface.interface_type!r} != {expected_type!r}"
+        )
+    if interface.generic_type_name != expected_generic_name:
+        raise TraceabilityError(
+            f"B5 generic type name mismatch for {resolved_name}: "
+            f"{interface.generic_type_name!r} != {expected_generic_name!r}"
         )
     if interface.topic_id != resolved_topic_id:
         raise TraceabilityError(
@@ -212,14 +224,73 @@ def _verify_function_code(
         )
 
 
-def _valid_range_value(entry: EdsEntry) -> dict[str, Any] | None:
-    if entry.valid_range is None:
+def _verify_payload_link(
+    container: EdsContainerType,
+    expected_payload_type: str,
+) -> None:
+    payload_entry = _entry(container, "Payload")
+    if payload_entry.type_ref != expected_payload_type:
+        raise TraceabilityError(
+            f"B5 Payload type mismatch for {container.name}: "
+            f"{payload_entry.type_ref!r} != {expected_payload_type!r}"
+        )
+
+
+def _expected_type_ref(semantic_type: str, context: str) -> str:
+    type_ref = TYPE_REFS.get(semantic_type)
+    if type_ref is None:
+        raise TraceabilityError(
+            f"B4 semantic type has no frozen B5 realization for {context}: {semantic_type}"
+        )
+    return type_ref
+
+
+def _expected_range_type(argument: ResolvedCommandArgument) -> str | None:
+    if argument.minimum is not None and argument.maximum is not None:
+        return "inclusiveMinInclusiveMax"
+    if argument.minimum is not None:
+        return "atLeast"
+    if argument.maximum is not None:
+        return "atMost"
+    return None
+
+
+def _verify_argument_entry(
+    argument: ResolvedCommandArgument,
+    entry: EdsEntry,
+    context: str,
+) -> str | None:
+    expected_type_ref = _expected_type_ref(argument.semantic_type, context)
+    if entry.type_ref != expected_type_ref:
+        raise TraceabilityError(
+            f"B4/B5 type realization mismatch for {context}: "
+            f"{expected_type_ref!r} != {entry.type_ref!r}"
+        )
+
+    expected_range_type = _expected_range_type(argument)
+    if expected_range_type is None:
+        if entry.valid_range is not None:
+            raise TraceabilityError(f"unexpected B5 valid range for {context}")
         return None
-    return {
-        "minimum": entry.valid_range.minimum,
-        "maximum": entry.valid_range.maximum,
-        "range_type": entry.valid_range.range_type,
-    }
+
+    if entry.valid_range is None:
+        raise TraceabilityError(f"B5 valid range missing for {context}")
+    if entry.valid_range.minimum != argument.minimum:
+        raise TraceabilityError(
+            f"B4/B5 minimum mismatch for {context}: "
+            f"{argument.minimum} != {entry.valid_range.minimum}"
+        )
+    if entry.valid_range.maximum != argument.maximum:
+        raise TraceabilityError(
+            f"B4/B5 maximum mismatch for {context}: "
+            f"{argument.maximum} != {entry.valid_range.maximum}"
+        )
+    if entry.valid_range.range_type != expected_range_type:
+        raise TraceabilityError(
+            f"B4/B5 range type mismatch for {context}: "
+            f"{expected_range_type!r} != {entry.valid_range.range_type!r}"
+        )
+    return expected_range_type
 
 
 def _check_unique(records: list[dict[str, Any]], family: str) -> None:
@@ -258,12 +329,19 @@ def build_traceability(
         resolved.command_interface.name,
         resolved.command_interface.topic_id,
         COMMAND_INTERFACE_TYPE,
+        COMMAND_GENERIC_TYPE,
         model,
     )
+    if command_interface.generic_type_ref != "CommandBase":
+        raise TraceabilityError(
+            "B5 command interface must map TelecommandDataType to CommandBase"
+        )
+
     telemetry_interface, telemetry_topic_variable = _verify_interface(
         resolved.telemetry_interface.name,
         resolved.telemetry_interface.topic_id,
         TELEMETRY_INTERFACE_TYPE,
+        TELEMETRY_GENERIC_TYPE,
         model,
     )
 
@@ -289,10 +367,13 @@ def build_traceability(
         if command.arguments:
             payload_name = stem + "_Payload"
             payload = _datatype(model, payload_name)
+            _verify_payload_link(variant, payload_name)
             targets.append(_datatype_target(model, payload_name))
             for argument in command.arguments:
+                context = f"{command.source_id}/{argument.name}"
                 entry_name = eds_name_v1(argument.name)
                 entry = _entry(payload, entry_name)
+                range_type = _verify_argument_entry(argument, entry, context)
                 targets.append(_entry_target(model, payload_name, entry_name))
 
                 resolutions.append(
@@ -304,26 +385,46 @@ def build_traceability(
                         source,
                         f"eds.argument.{argument.name}.type_ref",
                         entry.type_ref,
-                        "core",
+                        "adapter_default",
                     )
                 )
-
-                range_value = _valid_range_value(entry)
-                if argument.minimum is not None or argument.maximum is not None:
-                    if range_value is None:
-                        raise TraceabilityError(
-                            f"B5 valid range missing for {command.source_id}/{argument.name}"
-                        )
+                if argument.minimum is not None:
                     resolutions.append(
                         _resolution(
                             f"resolution.commands.{command.source_id}.argument."
-                            f"{argument.name}.valid_range",
+                            f"{argument.name}.minimum",
                             mapping_id,
                             command.binding_id,
                             source,
-                            f"eds.argument.{argument.name}.valid_range",
-                            range_value,
+                            f"eds.argument.{argument.name}.minimum",
+                            argument.minimum,
                             "core",
+                        )
+                    )
+                if argument.maximum is not None:
+                    resolutions.append(
+                        _resolution(
+                            f"resolution.commands.{command.source_id}.argument."
+                            f"{argument.name}.maximum",
+                            mapping_id,
+                            command.binding_id,
+                            source,
+                            f"eds.argument.{argument.name}.maximum",
+                            argument.maximum,
+                            "core",
+                        )
+                    )
+                if range_type is not None:
+                    resolutions.append(
+                        _resolution(
+                            f"resolution.commands.{command.source_id}.argument."
+                            f"{argument.name}.range_type",
+                            mapping_id,
+                            command.binding_id,
+                            source,
+                            f"eds.argument.{argument.name}.range_type",
+                            range_type,
+                            "adapter_default",
                         )
                     )
 
@@ -358,7 +459,13 @@ def build_traceability(
     telemetry_payload_name = packet_stem + "Tlm_Payload"
     telemetry_message_name = packet_stem + "Tlm"
     telemetry_payload = _datatype(model, telemetry_payload_name)
-    _datatype(model, telemetry_message_name)
+    telemetry_message = _datatype(model, telemetry_message_name)
+    _verify_payload_link(telemetry_message, telemetry_payload_name)
+    if telemetry_interface.generic_type_ref != telemetry_message_name:
+        raise TraceabilityError(
+            f"B5 telemetry interface type mapping mismatch: "
+            f"{telemetry_interface.generic_type_ref!r} != {telemetry_message_name!r}"
+        )
 
     mappings.append(
         _mapping(
@@ -392,6 +499,12 @@ def build_traceability(
         mapping_id = f"mapping.telemetry.{field.source_id}"
         entry_name = eds_name_v1(field.source_id)
         entry = _entry(telemetry_payload, entry_name)
+        expected_type_ref = _expected_type_ref(field.semantic_type, field.source_id)
+        if entry.type_ref != expected_type_ref:
+            raise TraceabilityError(
+                f"B4/B5 type realization mismatch for {field.source_id}: "
+                f"{expected_type_ref!r} != {entry.type_ref!r}"
+            )
         mappings.append(
             _mapping(
                 mapping_id,
@@ -411,7 +524,7 @@ def build_traceability(
                 source,
                 "eds.type_ref",
                 entry.type_ref,
-                "core",
+                "adapter_default",
             )
         )
 
