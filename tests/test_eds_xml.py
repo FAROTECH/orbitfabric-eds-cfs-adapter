@@ -11,6 +11,8 @@ from orbitfabric_eds_cfs_adapter.projection.eds_xml import (
     write_eds_xml,
 )
 from orbitfabric_eds_cfs_adapter.projection.model import (
+    BOOLEAN8_SIZE_BITS,
+    BOOLEAN8_TYPE,
     EdsContainerType,
     EdsEntry,
     EdsInterface,
@@ -23,7 +25,7 @@ from orbitfabric_eds_cfs_adapter.projection.model import (
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b6" / "expected.xml"
-EXPECTED_SHA256 = "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
+EXPECTED_SHA256 = "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
 
 
 def _model() -> EdsProjectionModel:
@@ -74,7 +76,7 @@ def _model() -> EdsProjectionModel:
                 entries=(
                     EdsEntry(
                         name="PayloadEnabled",
-                        type_ref="BASE_TYPES/StatusBit",
+                        type_ref=BOOLEAN8_TYPE,
                     ),
                     EdsEntry(
                         name="PayloadSampleCount",
@@ -145,6 +147,7 @@ def test_serializer_matches_retained_golden_bytes() -> None:
     expected = GOLDEN.read_bytes()
 
     assert actual == expected
+    assert len(actual) == 2921
     assert hashlib.sha256(actual).hexdigest() == EXPECTED_SHA256
 
 
@@ -179,6 +182,15 @@ def test_b5_concepts_are_preserved_in_xml() -> None:
     root = ET.fromstring(serialize_eds_xml(_model()))
     ns = {"eds": EDS_NAMESPACE}
 
+    boolean_type = root.find(
+        "eds:Package/eds:DataTypeSet/eds:BooleanDataType[@name='Boolean8']",
+        ns,
+    )
+    assert boolean_type is not None
+    boolean_encoding = boolean_type.find("eds:BooleanDataEncoding", ns)
+    assert boolean_encoding is not None
+    assert boolean_encoding.attrib == {"sizeInBits": str(BOOLEAN8_SIZE_BITS)}
+
     containers = root.findall("eds:Package/eds:DataTypeSet/eds:ContainerDataType", ns)
     assert [item.attrib["name"] for item in containers] == [
         "CommandBase",
@@ -188,6 +200,14 @@ def test_b5_concepts_are_preserved_in_xml() -> None:
         "PayloadStatusTlm_Payload",
         "PayloadStatusTlm",
     ]
+
+    enabled_entry = root.find(
+        ".//eds:ContainerDataType[@name='PayloadStatusTlm_Payload']"
+        "/eds:EntryList/eds:Entry[@name='PayloadEnabled']",
+        ns,
+    )
+    assert enabled_entry is not None
+    assert enabled_entry.attrib["type"] == BOOLEAN8_TYPE
 
     period_range = root.find(
         ".//eds:ContainerDataType[@name='PayloadSetPeriod_Payload']"

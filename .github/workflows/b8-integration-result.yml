@@ -124,17 +124,24 @@ jobs:
               trace_path.read_bytes()
           ).hexdigest()
           assert artifacts["eds.package"]["sha256"] == (
-              "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
+              "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
           )
           assert artifacts["traceability"]["sha256"] == (
-              "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e"
+              "8984eb984ec74c842681d024de617cbb8adf6aa05bf27fa67f0a4014541f859d"
           )
+
+          enabled = next(
+              item for item in result["resolutions"]
+              if item["id"] == "resolution.telemetry.payload.enabled.type_ref"
+          )
+          assert enabled["value"] == "Boolean8"
+          assert enabled["origin"] == "adapter_default"
 
           result_bytes = result_path.read_bytes()
           assert result_bytes == golden_path.read_bytes()
-          assert len(result_bytes) == 13180
+          assert len(result_bytes) == 13168
           assert hashlib.sha256(result_bytes).hexdigest() == (
-              "a0bd58de477505c9491d5b220b769690ac0a0ee38bd6c4555b69c2eb653c858b"
+              "002f73792ac03e3b10faf9a73c593e904fb140245d5b0414bd07ae3c1f1e7517"
           )
           print("B8 Core-conformant Integration Result: PASS")
           PY

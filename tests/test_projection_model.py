@@ -5,6 +5,8 @@ from dataclasses import replace
 import pytest
 
 from orbitfabric_eds_cfs_adapter.projection.model import (
+    BOOLEAN8_SIZE_BITS,
+    BOOLEAN8_TYPE,
     EdsValidRange,
     ProjectionModelError,
     build_projection_model,
@@ -86,6 +88,11 @@ def test_eds_name_v1_is_frozen() -> None:
     assert eds_name_v1("123_mode") == "N123Mode"
 
 
+def test_boolean8_realization_is_frozen_adapter_policy() -> None:
+    assert BOOLEAN8_TYPE == "Boolean8"
+    assert BOOLEAN8_SIZE_BITS == 8
+
+
 def test_frozen_slice_builds_expected_b5_model() -> None:
     model = build_projection_model(_resolved())
 
@@ -130,7 +137,7 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
 
     telemetry_payload = _datatype(model, "PayloadStatusTlm_Payload")
     assert [(item.name, item.type_ref) for item in telemetry_payload.entries] == [
-        ("PayloadEnabled", "BASE_TYPES/StatusBit"),
+        ("PayloadEnabled", BOOLEAN8_TYPE),
         ("PayloadSampleCount", "BASE_TYPES/uint32"),
     ]
 

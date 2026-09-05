@@ -2,6 +2,9 @@
 <PackageFile xmlns="http://www.ccsds.org/schema/sois/seds">
   <Package name="OF_DEMO">
     <DataTypeSet>
+      <BooleanDataType name="Boolean8">
+        <BooleanDataEncoding sizeInBits="8" />
+      </BooleanDataType>
       <ContainerDataType name="CommandBase" baseType="CFE_HDR/CommandHeader" />
       <ContainerDataType name="PayloadEnableCmd" baseType="CommandBase">
         <ConstraintSet>
@@ -27,7 +30,7 @@
       </ContainerDataType>
       <ContainerDataType name="PayloadStatusTlm_Payload">
         <EntryList>
-          <Entry name="PayloadEnabled" type="BASE_TYPES/StatusBit" />
+          <Entry name="PayloadEnabled" type="Boolean8" />
           <Entry name="PayloadSampleCount" type="BASE_TYPES/uint32" />
         </EntryList>
       </ContainerDataType>
