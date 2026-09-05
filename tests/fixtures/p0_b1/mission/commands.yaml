@@ -1,0 +1,23 @@
+commands:
+  - id: payload.enable
+    target: payload
+    description: Enable the payload.
+    arguments: []
+    allowed_modes:
+      - NOMINAL
+    requires_ack: true
+    risk: low
+
+  - id: payload.set_period
+    target: payload
+    description: Set the payload sampling period in milliseconds.
+    arguments:
+      - name: period_ms
+        type: uint32
+        min: 100
+        max: 60000
+        description: Requested sampling period in milliseconds.
+    allowed_modes:
+      - NOMINAL
+    requires_ack: true
+    risk: low

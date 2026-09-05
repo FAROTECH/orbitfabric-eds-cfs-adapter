@@ -1,0 +1,10 @@
+packets:
+  - id: payload_status
+    name: Payload Status
+    type: ccsds_like
+    max_payload_bytes: 64
+    period: 1s
+    telemetry:
+      - payload.enabled
+      - payload.sample_count
+    description: Logical status packet for the P0 mission slice.

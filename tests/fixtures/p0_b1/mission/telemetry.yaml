@@ -1,0 +1,22 @@
+telemetry:
+  - id: payload.enabled
+    name: Payload Enabled
+    type: bool
+    unit: none
+    source: payload
+    sampling: on_change
+    criticality: medium
+    persistence: none
+    downlink_priority: low
+    description: Whether the payload is enabled.
+
+  - id: payload.sample_count
+    name: Payload Sample Count
+    type: uint32
+    unit: count
+    source: payload
+    sampling: 1Hz
+    criticality: low
+    persistence: none
+    downlink_priority: low
+    description: Number of samples observed by the payload.

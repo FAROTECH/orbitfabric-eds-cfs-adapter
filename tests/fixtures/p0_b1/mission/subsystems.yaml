@@ -1,0 +1,6 @@
+subsystems:
+  - id: payload
+    name: Payload
+    type: payload
+    criticality: medium
+    description: Minimal payload subsystem for the EDS-cFS P0 projection proof.
