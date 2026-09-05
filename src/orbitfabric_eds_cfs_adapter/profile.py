@@ -19,7 +19,9 @@ class LoadedProfile:
 
 
 def _schema() -> dict[str, Any]:
-    schema_path = files("orbitfabric_eds_cfs_adapter").joinpath("schemas/profile-0.1.schema.json")
+    schema_path = files("orbitfabric_eds_cfs_adapter").joinpath(
+        "schemas/profile-0.1.schema.json"
+    )
     return json.loads(schema_path.read_text(encoding="utf-8"))
 
 
@@ -35,7 +37,10 @@ def load_profile_with_provenance(path: Path) -> LoadedProfile:
     except UnicodeDecodeError as exc:
         raise ValueError(f"Projection Profile is not valid UTF-8: {source}") from exc
 
-    raw = yaml.safe_load(text)
+    try:
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise ValueError("Projection Profile YAML parsing failed") from exc
     if not isinstance(raw, dict):
         raise ValueError("Projection Profile root must be an object")
 
