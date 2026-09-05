@@ -1,82 +1,83 @@
 {
   "$id": "https://orbitfabric.dev/adapters/eds-cfs/profile-0.1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "C0 bootstrap schema. EDS-cFS target realization fields are frozen during P0 after the Core input surface audit.",
+  "title": "OrbitFabric EDS-cFS Projection Profile",
+  "type": "object",
   "additionalProperties": false,
-  "properties": {
-    "bindings": {
-      "items": {
-        "additionalProperties": false,
-        "allOf": [
-          {
-            "if": {
-              "properties": {
-                "intent": {
-                  "const": "do_not_project"
-                }
-              }
-            },
-            "then": {
-              "required": [
-                "reason"
-              ]
-            }
-          }
-        ],
-        "properties": {
-          "config": {
-            "additionalProperties": false,
-            "properties": {},
-            "type": "object"
-          },
-          "id": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "intent": {
-            "enum": [
-              "project",
-              "do_not_project"
-            ]
-          },
-          "reason": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sources": {
-            "items": {
-              "additionalProperties": false,
-              "properties": {
-                "domain": {
-                  "minLength": 1,
-                  "type": "string"
-                },
-                "id": {
-                  "minLength": 1,
-                  "type": "string"
-                }
-              },
-              "required": [
-                "domain",
-                "id"
-              ],
-              "type": "object"
-            },
-            "minItems": 1,
-            "type": "array"
-          }
+  "$defs": {
+    "targetName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "coreSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "enum": [
+            "commands",
+            "packets"
+          ]
         },
-        "required": [
-          "id",
-          "intent",
-          "sources",
-          "config"
-        ],
-        "type": "object"
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
       },
-      "type": "array"
+      "required": [
+        "domain",
+        "id"
+      ]
+    },
+    "telemetrySource": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "const": "telemetry"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "domain",
+        "id"
+      ]
+    }
+  },
+  "properties": {
+    "kind": {
+      "const": "orbitfabric.projection_profile"
+    },
+    "profile_version": {
+      "const": "0.1-candidate"
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ]
     },
     "integration": {
+      "type": "object",
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -89,40 +90,245 @@
       "required": [
         "id",
         "schema_version"
-      ],
-      "type": "object"
+      ]
     },
-    "kind": {
-      "const": "orbitfabric.projection_profile"
-    },
-    "profile": {
+    "settings": {
+      "type": "object",
       "additionalProperties": false,
       "properties": {
-        "description": {
-          "type": "string"
+        "eds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "package_name": {
+              "$ref": "#/$defs/targetName"
+            },
+            "component_name": {
+              "$ref": "#/$defs/targetName"
+            }
+          },
+          "required": [
+            "package_name",
+            "component_name"
+          ]
         },
-        "id": {
-          "minLength": 1,
-          "type": "string"
-        },
-        "version": {
-          "minLength": 1,
-          "type": "string"
+        "interfaces": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/$defs/targetName"
+                },
+                "topic_id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 65535
+                }
+              },
+              "required": [
+                "name",
+                "topic_id"
+              ]
+            },
+            "telemetry": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "$ref": "#/$defs/targetName"
+                },
+                "topic_id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 65535
+                }
+              },
+              "required": [
+                "name",
+                "topic_id"
+              ]
+            }
+          },
+          "required": [
+            "command",
+            "telemetry"
+          ]
         }
       },
       "required": [
-        "id",
-        "version"
-      ],
-      "type": "object"
+        "eds",
+        "interfaces"
+      ]
     },
-    "profile_version": {
-      "const": "0.1-candidate"
-    },
-    "settings": {
-      "additionalProperties": false,
-      "properties": {},
-      "type": "object"
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "intent": {
+            "enum": [
+              "project",
+              "do_not_project"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/coreSource"
+            }
+          },
+          "config": {
+            "type": "object"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "intent",
+          "sources",
+          "config"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "intent": {
+                  "const": "do_not_project"
+                }
+              },
+              "required": [
+                "intent"
+              ]
+            },
+            "then": {
+              "required": [
+                "reason"
+              ],
+              "properties": {
+                "config": {
+                  "type": "object",
+                  "maxProperties": 0
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "intent": {
+                  "const": "project"
+                },
+                "sources": {
+                  "prefixItems": [
+                    {
+                      "properties": {
+                        "domain": {
+                          "const": "commands"
+                        }
+                      },
+                      "required": [
+                        "domain"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "intent",
+                "sources"
+              ]
+            },
+            "then": {
+              "properties": {
+                "config": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "function_code": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "function_code"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "intent": {
+                  "const": "project"
+                },
+                "sources": {
+                  "prefixItems": [
+                    {
+                      "properties": {
+                        "domain": {
+                          "const": "packets"
+                        }
+                      },
+                      "required": [
+                        "domain"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "intent",
+                "sources"
+              ]
+            },
+            "then": {
+              "properties": {
+                "config": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "fields": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "source": {
+                            "$ref": "#/$defs/telemetrySource"
+                          }
+                        },
+                        "required": [
+                          "source"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "fields"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
     }
   },
   "required": [
@@ -132,7 +338,5 @@
     "integration",
     "settings",
     "bindings"
-  ],
-  "title": "OrbitFabric EDS-cFS Adapter Bootstrap Projection Profile",
-  "type": "object"
+  ]
 }
