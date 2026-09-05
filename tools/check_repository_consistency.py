@@ -19,6 +19,33 @@ EXPECTED = {
     "operation": "eds_cfs_projection",
 }
 
+EXPECTED_CORE_COMPATIBILITY = {
+    "input_set_versions": ["0.1-candidate"],
+    "relationship_families": ["packet_includes_telemetry"],
+    "surfaces": [
+        {
+            "role": "entity_index",
+            "kind": "orbitfabric.entity_index",
+            "format_versions": ["0.1"],
+        },
+        {
+            "role": "lint_report",
+            "kind": "orbitfabric-lint",
+            "format_versions": ["v1"],
+        },
+        {
+            "role": "mission_snapshot",
+            "kind": "orbitfabric.mission_snapshot",
+            "format_versions": ["0.1-candidate"],
+        },
+        {
+            "role": "relationship_manifest",
+            "kind": "orbitfabric.relationship_manifest",
+            "format_versions": ["0.1-candidate"],
+        },
+    ],
+}
+
 
 def _fail(message: str) -> None:
     raise SystemExit(message)
@@ -60,8 +87,8 @@ def main() -> int:
     if schema_digest != declared_digest:
         _fail("Projection Profile schema digest mismatch")
 
-    if manifest["core_input_compatibility"]["surfaces"] != []:
-        _fail("C0 must not freeze Core surfaces before the P0 surface audit")
+    if manifest["core_input_compatibility"] != EXPECTED_CORE_COMPATIBILITY:
+        _fail("Core consumption declaration differs from Architecture Lab B2 freeze")
 
     residue_tokens = (
         "orbitfabric" + "-dummy",
@@ -82,7 +109,7 @@ def main() -> int:
                 if token in text:
                     _fail(f"Template teaching residue found in {path.relative_to(ROOT)}")
 
-    print("C0 repository consistency: PASS")
+    print("Repository consistency: PASS")
     return 0
 
 
