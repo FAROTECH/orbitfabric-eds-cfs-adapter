@@ -1,0 +1,37 @@
+name: P1 Native EDS Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  p1-native-eds-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned-lane host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            pkg-config \
+            libexpat1-dev \
+            liblua5.3-dev \
+            libjson-c-dev \
+            python3-dev
+
+      - name: Execute P1 complete native_eds build proof
+        run: bash .github/scripts/p1-native-eds-build.sh
+
+      - name: Upload P1 build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p1-native-build
+          path: ${{ runner.temp }}/orbitfabric-eds-cfs-p1-evidence
+          if-no-files-found: error
