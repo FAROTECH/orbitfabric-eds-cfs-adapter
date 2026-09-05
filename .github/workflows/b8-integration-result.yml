@@ -62,6 +62,7 @@ jobs:
           trace_path = root / "traceability.json"
           eds_path = root / "eds" / "mission.xml"
           profile_path = Path("tests/fixtures/p0_b3/profile.yaml")
+          golden_path = Path("tests/fixtures/p0_b8/expected.json")
 
           expected_files = {
               "eds/mission.xml",
@@ -130,10 +131,10 @@ jobs:
           )
 
           result_bytes = result_path.read_bytes()
-          print(f"B8 Integration Result size: {len(result_bytes)} bytes")
-          print(
-              "B8 Integration Result sha256: "
-              + hashlib.sha256(result_bytes).hexdigest()
+          assert result_bytes == golden_path.read_bytes()
+          assert len(result_bytes) == 13180
+          assert hashlib.sha256(result_bytes).hexdigest() == (
+              "a0bd58de477505c9491d5b220b769690ac0a0ee38bd6c4555b69c2eb653c858b"
           )
           print("B8 Core-conformant Integration Result: PASS")
           PY

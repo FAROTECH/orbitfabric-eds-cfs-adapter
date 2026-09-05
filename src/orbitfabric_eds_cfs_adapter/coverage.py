@@ -84,7 +84,9 @@ def build_coverage(
         domain, source_id = overlap[0]
         raise CoverageError(f"source is both projected and excluded: {domain}/{source_id}")
 
-    scoped_domains = sorted({domain for domain, _ in projected} | {domain for domain, _ in excluded})
+    scoped_domains = sorted(
+        {domain for domain, _ in projected} | {domain for domain, _ in excluded}
+    )
     if not scoped_domains:
         raise CoverageError("successful projection coverage has no declared Core domains")
 
@@ -111,7 +113,9 @@ def build_coverage(
 
     for key in sorted(set(projected) | set(excluded)):
         if key not in core_sources:
-            raise CoverageError(f"resolved source missing from Core Entity Index: {key[0]}/{key[1]}")
+            raise CoverageError(
+                f"resolved source missing from Core Entity Index: {key[0]}/{key[1]}"
+            )
 
     records: list[dict[str, Any]] = []
     for key in sorted(core_sources):
@@ -157,7 +161,10 @@ def build_coverage(
                 "mappings": [],
                 "profile_bindings": [],
                 "diagnostics": [],
-                "reason": "No Projection Profile binding for this source in the declared EDS-cFS scope",
+                "reason": (
+                    "No Projection Profile binding for this source in the declared "
+                    "EDS-cFS scope"
+                ),
             }
         )
 

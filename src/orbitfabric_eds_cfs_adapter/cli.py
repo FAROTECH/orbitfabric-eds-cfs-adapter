@@ -87,7 +87,14 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.profile),
             Path(args.output_dir),
         )
-    except (InputSetError, ResolutionError, TraceabilityError, ResultError, OSError, ValueError) as exc:
+    except (
+        InputSetError,
+        ResolutionError,
+        TraceabilityError,
+        ResultError,
+        OSError,
+        ValueError,
+    ) as exc:
         print(f"EDS-cFS projection failed: {exc}", file=sys.stderr)
         return 1
 

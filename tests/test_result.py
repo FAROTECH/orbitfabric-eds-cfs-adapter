@@ -26,10 +26,13 @@ from orbitfabric_eds_cfs_adapter.result import (
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "tests" / "fixtures" / "p0_b3" / "profile.yaml"
+GOLDEN = ROOT / "tests" / "fixtures" / "p0_b8" / "expected.json"
 CORE_DIGEST = "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98"
 PROFILE_DIGEST = "f8e380f165d15cebb8ccdd83c00791ffa4414102887fcbc934332c4189a43350"
 B6_DIGEST = "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
 B7_DIGEST = "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e"
+B8_SIZE = 13180
+B8_DIGEST = "a0bd58de477505c9491d5b220b769690ac0a0ee38bd6c4555b69c2eb653c858b"
 
 
 def _core() -> LoadedInputSet:
@@ -239,6 +242,15 @@ def test_b7_materialized_bytes_must_match_serializer(tmp_path: Path) -> None:
         build_success_result(core, loaded_profile, resolved, traceability, output_dir)
 
 
+def test_result_matches_retained_b8_golden_bytes(tmp_path: Path) -> None:
+    *_prefix, result = _bundle(tmp_path)
+    actual = serialize_result(result)
+
+    assert actual == GOLDEN.read_bytes()
+    assert len(actual) == B8_SIZE
+    assert hashlib.sha256(actual).hexdigest() == B8_DIGEST
+
+
 def test_result_serialization_is_deterministic_and_write_last_ready(tmp_path: Path) -> None:
     *_prefix, traceability, output_dir, result = _bundle(tmp_path)
 
@@ -250,4 +262,4 @@ def test_result_serialization_is_deterministic_and_write_last_ready(tmp_path: Pa
 
     path = write_result(output_dir, result, traceability)
     assert path.name == "integration_result.json"
-    assert path.read_bytes() == first
+    assert path.read_bytes() == first == GOLDEN.read_bytes()
