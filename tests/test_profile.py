@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 from pathlib import Path
 
-import pytest
 from jsonschema import ValidationError
+import pytest
 
 from orbitfabric_eds_cfs_adapter.profile import load_profile
 
