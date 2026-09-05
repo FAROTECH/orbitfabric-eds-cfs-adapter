@@ -5,7 +5,6 @@ from jsonschema import ValidationError
 
 from orbitfabric_eds_cfs_adapter.profile import load_profile
 
-
 VALID_BOOTSTRAP_PROFILE = """\
 kind: orbitfabric.projection_profile
 profile_version: 0.1-candidate
