@@ -1,0 +1,138 @@
+{
+  "$id": "https://orbitfabric.dev/adapters/eds-cfs/profile-0.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "C0 bootstrap schema. EDS-cFS target realization fields are frozen during P0 after the Core input surface audit.",
+  "additionalProperties": false,
+  "properties": {
+    "bindings": {
+      "items": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "intent": {
+                  "const": "do_not_project"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "reason"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "config": {
+            "additionalProperties": false,
+            "properties": {},
+            "type": "object"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "intent": {
+            "enum": [
+              "project",
+              "do_not_project"
+            ]
+          },
+          "reason": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "domain": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "domain",
+                "id"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "intent",
+          "sources",
+          "config"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "integration": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "const": "orbitfabric-eds-cfs"
+        },
+        "schema_version": {
+          "const": "0.1-candidate"
+        }
+      },
+      "required": [
+        "id",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "orbitfabric.projection_profile"
+    },
+    "profile": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "type": "object"
+    },
+    "profile_version": {
+      "const": "0.1-candidate"
+    },
+    "settings": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    }
+  },
+  "required": [
+    "kind",
+    "profile_version",
+    "profile",
+    "integration",
+    "settings",
+    "bindings"
+  ],
+  "title": "OrbitFabric EDS-cFS Adapter Bootstrap Projection Profile",
+  "type": "object"
+}
