@@ -17,9 +17,19 @@ class ResolvedInterface:
 
 
 @dataclass(frozen=True)
+class ResolvedCommandArgument:
+    name: str
+    semantic_type: str
+    minimum: float | int | None
+    maximum: float | int | None
+    enum: tuple[str, ...] | None
+    default: Any | None
+
+
+@dataclass(frozen=True)
 class ResolvedTelemetryField:
     source_id: str
-    telemetry: dict[str, Any]
+    semantic_type: str
 
 
 @dataclass(frozen=True)
@@ -27,7 +37,7 @@ class ResolvedCommandBinding:
     binding_id: str
     source_id: str
     function_code: int
-    command: dict[str, Any]
+    arguments: tuple[ResolvedCommandArgument, ...]
 
 
 @dataclass(frozen=True)
@@ -88,6 +98,50 @@ def _packet_membership(core: LoadedInputSet, packet_id: str) -> set[str]:
         return set(core.packet_telemetry_ids(packet_id))
     except InputSetError as exc:
         raise ResolutionError(str(exc)) from exc
+
+
+def _command_arguments(core: LoadedInputSet, command_id: str) -> tuple[ResolvedCommandArgument, ...]:
+    command = _model_record(core, "commands", command_id)
+    arguments = command.get("arguments")
+    if not isinstance(arguments, list):
+        raise ResolutionError(f"Core command arguments are not an array: {command_id}")
+
+    resolved: list[ResolvedCommandArgument] = []
+    for argument in arguments:
+        if not isinstance(argument, dict):
+            raise ResolutionError(f"Core command argument is not an object: {command_id}")
+        name = argument.get("name")
+        semantic_type = argument.get("type")
+        if not isinstance(name, str) or not name:
+            raise ResolutionError(f"Core command argument has invalid name: {command_id}")
+        if not isinstance(semantic_type, str) or not semantic_type:
+            raise ResolutionError(f"Core command argument has invalid type: {command_id}/{name}")
+        enum = argument.get("enum")
+        if enum is not None:
+            if not isinstance(enum, list) or not all(isinstance(item, str) for item in enum):
+                raise ResolutionError(f"Core command argument has invalid enum: {command_id}/{name}")
+            resolved_enum: tuple[str, ...] | None = tuple(enum)
+        else:
+            resolved_enum = None
+        resolved.append(
+            ResolvedCommandArgument(
+                name=name,
+                semantic_type=semantic_type,
+                minimum=argument.get("min"),
+                maximum=argument.get("max"),
+                enum=resolved_enum,
+                default=argument.get("default"),
+            )
+        )
+    return tuple(resolved)
+
+
+def _telemetry_type(core: LoadedInputSet, telemetry_id: str) -> str:
+    telemetry = _model_record(core, "telemetry", telemetry_id)
+    semantic_type = telemetry.get("type")
+    if not isinstance(semantic_type, str) or not semantic_type:
+        raise ResolutionError(f"Core telemetry has invalid type: {telemetry_id}")
+    return semantic_type
 
 
 def resolve_profile(profile: dict[str, Any], core: LoadedInputSet) -> ResolvedProfile:
@@ -155,7 +209,7 @@ def resolve_profile(profile: dict[str, Any], core: LoadedInputSet) -> ResolvedPr
                     binding_id=binding_id,
                     source_id=source_id,
                     function_code=function_code,
-                    command=_model_record(core, "commands", source_id),
+                    arguments=_command_arguments(core, source_id),
                 )
             )
             continue
@@ -171,7 +225,7 @@ def resolve_profile(profile: dict[str, Any], core: LoadedInputSet) -> ResolvedPr
                 fields.append(
                     ResolvedTelemetryField(
                         source_id=telemetry_id,
-                        telemetry=_model_record(core, "telemetry", telemetry_id),
+                        semantic_type=_telemetry_type(core, telemetry_id),
                     )
                 )
 
