@@ -1,170 +1,17 @@
 {
-  "adapter": {
-    "id": "orbitfabric-eds-cfs",
-    "version": "0.1.0.dev0"
-  },
-  "artifacts": [
-    {
-      "derived_from_mappings": [
-        "mapping.commands.payload.enable",
-        "mapping.commands.payload.set_period",
-        "mapping.packets.payload_status",
-        "mapping.telemetry.payload.enabled",
-        "mapping.telemetry.payload.sample_count"
-      ],
-      "id": "eds.package",
-      "kind": "ccsds.sois.eds.xml",
-      "media_type": "application/xml",
-      "path": "eds/mission.xml",
-      "reason": null,
-      "requirement": "required",
-      "retained_partial": false,
-      "sha256": "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240",
-      "status": "generated"
-    },
-    {
-      "derived_from_mappings": [
-        "mapping.commands.payload.enable",
-        "mapping.commands.payload.set_period",
-        "mapping.packets.payload_status",
-        "mapping.telemetry.payload.enabled",
-        "mapping.telemetry.payload.sample_count"
-      ],
-      "id": "traceability",
-      "kind": "orbitfabric.eds_cfs.traceability",
-      "media_type": "application/json",
-      "path": "traceability.json",
-      "reason": null,
-      "requirement": "required",
-      "retained_partial": false,
-      "sha256": "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e",
-      "status": "generated"
-    }
-  ],
-  "capabilities": [
-    "artifact_generation",
-    "profile_validation",
-    "projection",
-    "traceability"
-  ],
-  "coverage": {
-    "reason": null,
-    "records": [
-      {
-        "diagnostics": [],
-        "mappings": [
-          "mapping.commands.payload.enable"
-        ],
-        "profile_bindings": [
-          "cmd.payload-enable"
-        ],
-        "reason": null,
-        "source": {
-          "domain": "commands",
-          "id": "payload.enable"
-        },
-        "state": "projected"
-      },
-      {
-        "diagnostics": [],
-        "mappings": [
-          "mapping.commands.payload.set_period"
-        ],
-        "profile_bindings": [
-          "cmd.payload-set-period"
-        ],
-        "reason": null,
-        "source": {
-          "domain": "commands",
-          "id": "payload.set_period"
-        },
-        "state": "projected"
-      },
-      {
-        "diagnostics": [],
-        "mappings": [
-          "mapping.packets.payload_status"
-        ],
-        "profile_bindings": [
-          "packet.payload-status"
-        ],
-        "reason": null,
-        "source": {
-          "domain": "packets",
-          "id": "payload_status"
-        },
-        "state": "projected"
-      },
-      {
-        "diagnostics": [],
-        "mappings": [
-          "mapping.telemetry.payload.enabled"
-        ],
-        "profile_bindings": [
-          "packet.payload-status"
-        ],
-        "reason": null,
-        "source": {
-          "domain": "telemetry",
-          "id": "payload.enabled"
-        },
-        "state": "projected"
-      },
-      {
-        "diagnostics": [],
-        "mappings": [
-          "mapping.telemetry.payload.sample_count"
-        ],
-        "profile_bindings": [
-          "packet.payload-status"
-        ],
-        "reason": null,
-        "source": {
-          "domain": "telemetry",
-          "id": "payload.sample_count"
-        },
-        "state": "projected"
-      }
-    ],
-    "scope": {
-      "domains": [
-        "commands",
-        "packets",
-        "telemetry"
-      ]
-    },
-    "status": "complete",
-    "summary": {
-      "projected": 5
-    }
-  },
-  "diagnostics": [],
-  "evidence": [],
-  "external_tools": [],
-  "inputs": {
-    "core_input_set": {
-      "kind": "orbitfabric.integration_input_set",
-      "reason": null,
-      "sha256": "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98",
-      "status": "available",
-      "version": "0.1-candidate"
-    },
-    "operation_inputs": [],
-    "profile": {
-      "id": "eds-cfs-p0",
-      "kind": "orbitfabric.projection_profile",
-      "profile_version": "0.1-candidate",
-      "reason": null,
-      "sha256": "f8e380f165d15cebb8ccdd83c00791ffa4414102887fcbc934332c4189a43350",
-      "status": "available",
-      "version": "0.1.0"
-    }
+  "artifact": {
+    "component": "Application",
+    "id": "eds.package",
+    "kind": "ccsds.sois.eds.xml",
+    "media_type": "application/xml",
+    "package": "OF_DEMO",
+    "sha256": "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
   },
   "integration": {
     "id": "orbitfabric-eds-cfs",
     "schema_version": "0.1-candidate"
   },
-  "kind": "orbitfabric.integration_result",
+  "kind": "orbitfabric.eds_cfs.traceability",
   "mappings": [
     {
       "id": "mapping.commands.payload.enable",
@@ -347,14 +194,9 @@
       ]
     }
   ],
-  "mission": {
+  "profile": {
     "id": "eds-cfs-p0",
-    "model_version": "0.1.0",
-    "reason": null,
-    "status": "available"
-  },
-  "operation": {
-    "id": "eds_cfs_projection"
+    "version": "0.1.0"
   },
   "resolutions": [
     {
@@ -495,7 +337,7 @@
           "id": "payload.enabled"
         }
       ],
-      "value": "BASE_TYPES/StatusBit"
+      "value": "Boolean8"
     },
     {
       "binding": "packet.payload-status",

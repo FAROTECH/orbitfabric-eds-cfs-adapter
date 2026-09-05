@@ -8,6 +8,7 @@ import pytest
 
 from orbitfabric_eds_cfs_adapter.projection.eds_xml import serialize_eds_xml
 from orbitfabric_eds_cfs_adapter.projection.model import (
+    BOOLEAN8_TYPE,
     EdsEntry,
     EdsValueConstraint,
     build_projection_model,
@@ -30,8 +31,8 @@ from orbitfabric_eds_cfs_adapter.projection.traceability import (
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b7" / "expected.json"
-EXPECTED_SHA256 = "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e"
-EXPECTED_B6_SHA256 = "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
+EXPECTED_SHA256 = "8984eb984ec74c842681d024de617cbb8adf6aa05bf27fa67f0a4014541f859d"
+EXPECTED_B6_SHA256 = "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
 
 
 def _resolved() -> ResolvedProfile:
@@ -114,6 +115,7 @@ def test_traceability_matches_retained_golden_bytes() -> None:
     actual = serialize_traceability(payload)
 
     assert actual == GOLDEN.read_bytes()
+    assert len(actual) == 9186
     assert hashlib.sha256(actual).hexdigest() == EXPECTED_SHA256
     assert payload["artifact"]["sha256"] == EXPECTED_B6_SHA256
 
@@ -239,7 +241,7 @@ def test_packet_and_telemetry_traceability_are_explicit() -> None:
         "resolution.telemetry.payload.enabled.type_ref",
     )
     assert (enabled_type["value"], enabled_type["origin"]) == (
-        "BASE_TYPES/StatusBit",
+        BOOLEAN8_TYPE,
         "adapter_default",
     )
 
@@ -303,7 +305,7 @@ def test_command_type_realization_mismatch_fails_closed() -> None:
         period = payload.entries[0]
         return replace(
             payload,
-            entries=(replace(period, type_ref="BASE_TYPES/StatusBit"),),
+            entries=(replace(period, type_ref=BOOLEAN8_TYPE),),
         )
 
     model = _replace_datatype(model, "PayloadSetPeriod_Payload", replace_period)
