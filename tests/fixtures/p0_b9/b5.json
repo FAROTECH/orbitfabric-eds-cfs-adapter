@@ -1,0 +1,180 @@
+{
+  "adapter": {
+    "id": "orbitfabric-eds-cfs",
+    "version": "0.1.0.dev0"
+  },
+  "artifacts": [
+    {
+      "derived_from_mappings": [],
+      "id": "eds.package",
+      "kind": "ccsds.sois.eds.xml",
+      "media_type": "application/xml",
+      "path": null,
+      "reason": "Resolved mission semantics cannot be represented by the P0 EDS-cFS projection",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    },
+    {
+      "derived_from_mappings": [],
+      "id": "traceability",
+      "kind": "orbitfabric.eds_cfs.traceability",
+      "media_type": "application/json",
+      "path": null,
+      "reason": "Resolved mission semantics cannot be represented by the P0 EDS-cFS projection",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    }
+  ],
+  "capabilities": [
+    "profile_validation",
+    "projection"
+  ],
+  "coverage": {
+    "reason": null,
+    "records": [
+      {
+        "diagnostics": [
+          "diag-001"
+        ],
+        "mappings": [],
+        "profile_bindings": [
+          "cmd.payload-enable"
+        ],
+        "reason": "Projection was blocked because the integration operation failed",
+        "source": {
+          "domain": "commands",
+          "id": "payload.enable"
+        },
+        "state": "blocked"
+      },
+      {
+        "diagnostics": [
+          "diag-001"
+        ],
+        "mappings": [],
+        "profile_bindings": [
+          "cmd.payload-set-period"
+        ],
+        "reason": "Projection was blocked because the integration operation failed",
+        "source": {
+          "domain": "commands",
+          "id": "payload.set_period"
+        },
+        "state": "blocked"
+      },
+      {
+        "diagnostics": [
+          "diag-001"
+        ],
+        "mappings": [],
+        "profile_bindings": [
+          "packet.payload-status"
+        ],
+        "reason": "Projection was blocked because the integration operation failed",
+        "source": {
+          "domain": "packets",
+          "id": "payload_status"
+        },
+        "state": "blocked"
+      },
+      {
+        "diagnostics": [
+          "diag-001"
+        ],
+        "mappings": [],
+        "profile_bindings": [
+          "packet.payload-status"
+        ],
+        "reason": "Projection was blocked because the integration operation failed",
+        "source": {
+          "domain": "telemetry",
+          "id": "payload.enabled"
+        },
+        "state": "blocked"
+      },
+      {
+        "diagnostics": [
+          "diag-001"
+        ],
+        "mappings": [],
+        "profile_bindings": [
+          "packet.payload-status"
+        ],
+        "reason": "Projection was blocked because the integration operation failed",
+        "source": {
+          "domain": "telemetry",
+          "id": "payload.sample_count"
+        },
+        "state": "blocked"
+      }
+    ],
+    "scope": {
+      "domains": [
+        "commands",
+        "packets",
+        "telemetry"
+      ]
+    },
+    "status": "complete",
+    "summary": {
+      "blocked": 5
+    }
+  },
+  "diagnostics": [
+    {
+      "code": "EDS-CFS-PROJECT-001",
+      "id": "diag-001",
+      "message": "Resolved mission semantics cannot be represented by the P0 EDS-cFS projection",
+      "owner": "integration",
+      "phase": "projection_validation",
+      "producer": "orbitfabric-eds-cfs",
+      "profile_bindings": [],
+      "severity": "ERROR",
+      "sources": [],
+      "targets": []
+    }
+  ],
+  "evidence": [],
+  "external_tools": [],
+  "inputs": {
+    "core_input_set": {
+      "kind": "orbitfabric.integration_input_set",
+      "reason": null,
+      "sha256": "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98",
+      "status": "available",
+      "version": "0.1-candidate"
+    },
+    "operation_inputs": [],
+    "profile": {
+      "id": "eds-cfs-p0",
+      "kind": "orbitfabric.projection_profile",
+      "profile_version": "0.1-candidate",
+      "reason": null,
+      "sha256": "32b9c8bcfa18a2411cd93eb9d4403f3c2fbffdd42d61a67d60f0f5043ce66f5b",
+      "status": "available",
+      "version": "0.1.0"
+    }
+  },
+  "integration": {
+    "id": "orbitfabric-eds-cfs",
+    "schema_version": "0.1-candidate"
+  },
+  "kind": "orbitfabric.integration_result",
+  "mappings": [],
+  "mission": {
+    "id": "eds-cfs-p0",
+    "model_version": "0.1.0",
+    "reason": null,
+    "status": "available"
+  },
+  "operation": {
+    "id": "eds_cfs_projection"
+  },
+  "resolutions": [],
+  "result": "failed",
+  "result_version": "0.2-candidate"
+}

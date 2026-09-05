@@ -1,0 +1,98 @@
+{
+  "adapter": {
+    "id": "orbitfabric-eds-cfs",
+    "version": "0.1.0.dev0"
+  },
+  "artifacts": [
+    {
+      "derived_from_mappings": [],
+      "id": "eds.package",
+      "kind": "ccsds.sois.eds.xml",
+      "media_type": "application/xml",
+      "path": null,
+      "reason": "Projection Profile could not be resolved against the Core input",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    },
+    {
+      "derived_from_mappings": [],
+      "id": "traceability",
+      "kind": "orbitfabric.eds_cfs.traceability",
+      "media_type": "application/json",
+      "path": null,
+      "reason": "Projection Profile could not be resolved against the Core input",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    }
+  ],
+  "capabilities": [
+    "profile_validation",
+    "projection"
+  ],
+  "coverage": {
+    "reason": "Projection Profile could not be resolved against the Core input",
+    "records": [],
+    "scope": {
+      "domains": []
+    },
+    "status": "unavailable",
+    "summary": {}
+  },
+  "diagnostics": [
+    {
+      "code": "EDS-CFS-RESOLVE-001",
+      "id": "diag-001",
+      "message": "Projection Profile could not be resolved against the Core input",
+      "owner": "integration",
+      "phase": "source_resolution",
+      "producer": "orbitfabric-eds-cfs",
+      "profile_bindings": [],
+      "severity": "ERROR",
+      "sources": [],
+      "targets": []
+    }
+  ],
+  "evidence": [],
+  "external_tools": [],
+  "inputs": {
+    "core_input_set": {
+      "kind": "orbitfabric.integration_input_set",
+      "reason": null,
+      "sha256": "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98",
+      "status": "available",
+      "version": "0.1-candidate"
+    },
+    "operation_inputs": [],
+    "profile": {
+      "id": "eds-cfs-p0",
+      "kind": "orbitfabric.projection_profile",
+      "profile_version": "0.1-candidate",
+      "reason": null,
+      "sha256": "4975a772e7424b3fb51b4348e70f311f6b70b865503232c69bcf51988b91a005",
+      "status": "available",
+      "version": "0.1.0"
+    }
+  },
+  "integration": {
+    "id": "orbitfabric-eds-cfs",
+    "schema_version": "0.1-candidate"
+  },
+  "kind": "orbitfabric.integration_result",
+  "mappings": [],
+  "mission": {
+    "id": "eds-cfs-p0",
+    "model_version": "0.1.0",
+    "reason": null,
+    "status": "available"
+  },
+  "operation": {
+    "id": "eds_cfs_projection"
+  },
+  "resolutions": [],
+  "result": "failed",
+  "result_version": "0.2-candidate"
+}

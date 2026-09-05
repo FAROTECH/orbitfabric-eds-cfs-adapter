@@ -1,0 +1,97 @@
+{
+  "adapter": {
+    "id": "orbitfabric-eds-cfs",
+    "version": "0.1.0.dev0"
+  },
+  "artifacts": [
+    {
+      "derived_from_mappings": [],
+      "id": "eds.package",
+      "kind": "ccsds.sois.eds.xml",
+      "media_type": "application/xml",
+      "path": null,
+      "reason": "Projection Profile validation failed",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    },
+    {
+      "derived_from_mappings": [],
+      "id": "traceability",
+      "kind": "orbitfabric.eds_cfs.traceability",
+      "media_type": "application/json",
+      "path": null,
+      "reason": "Projection Profile validation failed",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    }
+  ],
+  "capabilities": [
+    "profile_validation"
+  ],
+  "coverage": {
+    "reason": "Projection Profile validation failed",
+    "records": [],
+    "scope": {
+      "domains": []
+    },
+    "status": "unavailable",
+    "summary": {}
+  },
+  "diagnostics": [
+    {
+      "code": "EDS-CFS-PROFILE-001",
+      "id": "diag-001",
+      "message": "Projection Profile validation failed",
+      "owner": "integration",
+      "phase": "profile_schema",
+      "producer": "orbitfabric-eds-cfs",
+      "profile_bindings": [],
+      "severity": "ERROR",
+      "sources": [],
+      "targets": []
+    }
+  ],
+  "evidence": [],
+  "external_tools": [],
+  "inputs": {
+    "core_input_set": {
+      "kind": "orbitfabric.integration_input_set",
+      "reason": null,
+      "sha256": "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98",
+      "status": "available",
+      "version": "0.1-candidate"
+    },
+    "operation_inputs": [],
+    "profile": {
+      "id": null,
+      "kind": null,
+      "profile_version": null,
+      "reason": "Projection Profile provenance was not established",
+      "sha256": null,
+      "status": "unavailable",
+      "version": null
+    }
+  },
+  "integration": {
+    "id": "orbitfabric-eds-cfs",
+    "schema_version": null
+  },
+  "kind": "orbitfabric.integration_result",
+  "mappings": [],
+  "mission": {
+    "id": "eds-cfs-p0",
+    "model_version": "0.1.0",
+    "reason": null,
+    "status": "available"
+  },
+  "operation": {
+    "id": "eds_cfs_projection"
+  },
+  "resolutions": [],
+  "result": "failed",
+  "result_version": "0.2-candidate"
+}

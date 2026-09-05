@@ -136,7 +136,7 @@ jobs:
               "/tmp/eds-cfs-b9-negative/out-${layer}/integration_result.json"
           done
 
-      - name: Audit B9 failure taxonomy provenance rollback and coverage
+      - name: Audit B9 failure taxonomy provenance rollback coverage and golden bytes
         run: |
           python - <<'PY'
           import hashlib
@@ -144,6 +144,7 @@ jobs:
           from pathlib import Path
 
           root = Path("/tmp/eds-cfs-b9-negative")
+          golden_root = Path("tests/fixtures/p0_b9")
           expected = {
               "b2": {
                   "phase": "input_compatibility",
@@ -153,6 +154,8 @@ jobs:
                   "profile": "unavailable",
                   "schema": None,
                   "coverage": "unavailable",
+                  "size": 2472,
+                  "sha256": "62549d9a7aff558677d057fb0a46c0dd1c002a912fd836a4a66ab3f51fd78a13",
               },
               "b3": {
                   "phase": "profile_schema",
@@ -162,6 +165,8 @@ jobs:
                   "profile": "unavailable",
                   "schema": None,
                   "coverage": "unavailable",
+                  "size": 2376,
+                  "sha256": "5f57622b9c6d20484b3bb07e4f509775961cee2040ca605610d6d228bdb375eb",
               },
               "b4": {
                   "phase": "source_resolution",
@@ -171,6 +176,8 @@ jobs:
                   "profile": "available",
                   "schema": "0.1-candidate",
                   "coverage": "unavailable",
+                  "size": 2579,
+                  "sha256": "7d4a3428de71d4e5903db0963e0de81cf17ed217dd60f50f19ccb11854d2880b",
               },
               "b5": {
                   "phase": "projection_validation",
@@ -180,6 +187,8 @@ jobs:
                   "profile": "available",
                   "schema": "0.1-candidate",
                   "coverage": "complete",
+                  "size": 4570,
+                  "sha256": "c515a5acf862cf60cda8be0760344a3d51a841cb78bfba3536bb5acab8e02093",
               },
           }
 
@@ -195,7 +204,12 @@ jobs:
               assert files == {"integration_result.json"}
 
               result_path = output / "integration_result.json"
-              result = json.loads(result_path.read_text(encoding="utf-8"))
+              data = result_path.read_bytes()
+              assert data == (golden_root / f"{layer}.json").read_bytes()
+              assert len(data) == contract["size"]
+              assert hashlib.sha256(data).hexdigest() == contract["sha256"]
+
+              result = json.loads(data)
               assert result["result"] == "failed"
               assert result["integration"]["schema_version"] == contract["schema"]
               assert result["inputs"]["core_input_set"]["status"] == contract["core"]
@@ -223,10 +237,11 @@ jobs:
                       for record in result["coverage"]["records"]
                   )
 
-              data = result_path.read_bytes()
-              digest = hashlib.sha256(data).hexdigest()
               print(f"B9 {layer.upper()} failed Result size: {len(data)} bytes")
-              print(f"B9 {layer.upper()} failed Result sha256: {digest}")
+              print(
+                  f"B9 {layer.upper()} failed Result sha256: "
+                  f"{hashlib.sha256(data).hexdigest()}"
+              )
               (evidence / f"{layer}.json").write_bytes(data)
           PY
 
