@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PackageFile xmlns="http://www.ccsds.org/schema/sois/seds">
+  <Package name="OF_DEMO">
+    <DataTypeSet>
+      <ContainerDataType name="CommandBase" baseType="CFE_HDR/CommandHeader" />
+      <ContainerDataType name="PayloadEnableCmd" baseType="CommandBase">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="0" />
+        </ConstraintSet>
+      </ContainerDataType>
+      <ContainerDataType name="PayloadSetPeriod_Payload">
+        <EntryList>
+          <Entry name="PeriodMs" type="BASE_TYPES/uint32">
+            <ValidRange>
+              <MinMaxRange min="100" max="60000" rangeType="inclusiveMinInclusiveMax" />
+            </ValidRange>
+          </Entry>
+        </EntryList>
+      </ContainerDataType>
+      <ContainerDataType name="PayloadSetPeriodCmd" baseType="CommandBase">
+        <ConstraintSet>
+          <ValueConstraint entry="Sec.FunctionCode" value="1" />
+        </ConstraintSet>
+        <EntryList>
+          <Entry name="Payload" type="PayloadSetPeriod_Payload" />
+        </EntryList>
+      </ContainerDataType>
+      <ContainerDataType name="PayloadStatusTlm_Payload">
+        <EntryList>
+          <Entry name="PayloadEnabled" type="BASE_TYPES/StatusBit" />
+          <Entry name="PayloadSampleCount" type="BASE_TYPES/uint32" />
+        </EntryList>
+      </ContainerDataType>
+      <ContainerDataType name="PayloadStatusTlm" baseType="CFE_HDR/TelemetryHeader">
+        <EntryList>
+          <Entry name="Payload" type="PayloadStatusTlm_Payload" />
+        </EntryList>
+      </ContainerDataType>
+    </DataTypeSet>
+    <ComponentSet>
+      <Component name="Application">
+        <RequiredInterfaceSet>
+          <Interface name="CMD" type="CFE_SB/Telecommand">
+            <GenericTypeMapSet>
+              <GenericTypeMap name="TelecommandDataType" type="CommandBase" />
+            </GenericTypeMapSet>
+          </Interface>
+          <Interface name="STATUS_TLM" type="CFE_SB/Telemetry">
+            <GenericTypeMapSet>
+              <GenericTypeMap name="TelemetryDataType" type="PayloadStatusTlm" />
+            </GenericTypeMapSet>
+          </Interface>
+        </RequiredInterfaceSet>
+        <Implementation>
+          <VariableSet>
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="CMDTopicId" initialValue="160" />
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="STATUSTLMTopicId" initialValue="161" />
+          </VariableSet>
+          <ParameterMapSet>
+            <ParameterMap interface="CMD" parameter="TopicId" variableRef="CMDTopicId" />
+            <ParameterMap interface="STATUS_TLM" parameter="TopicId" variableRef="STATUSTLMTopicId" />
+          </ParameterMapSet>
+        </Implementation>
+      </Component>
+    </ComponentSet>
+  </Package>
+</PackageFile>
