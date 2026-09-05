@@ -169,11 +169,17 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
         ),
     ]
 
-    assert [(item.name, item.type_ref, item.read_only, item.initial_value) for item in model.variables] == [
+    assert [
+        (item.name, item.type_ref, item.read_only, item.initial_value)
+        for item in model.variables
+    ] == [
         ("CMDTopicId", "BASE_TYPES/uint16", True, 160),
         ("STATUSTLMTopicId", "BASE_TYPES/uint16", True, 161),
     ]
-    assert [(item.interface, item.parameter, item.variable_ref) for item in model.parameter_maps] == [
+    assert [
+        (item.interface, item.parameter, item.variable_ref)
+        for item in model.parameter_maps
+    ] == [
         ("CMD", "TopicId", "CMDTopicId"),
         ("STATUS_TLM", "TopicId", "STATUSTLMTopicId"),
     ]
