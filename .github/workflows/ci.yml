@@ -56,6 +56,7 @@ jobs:
           required = {
               "orbitfabric_eds_cfs_adapter/integration_package.json",
               "orbitfabric_eds_cfs_adapter/schemas/profile-0.1.schema.json",
+              "orbitfabric_eds_cfs_adapter/schemas/traceability-0.1.schema.json",
           }
           missing = sorted(required - names)
           if missing:
@@ -301,6 +302,60 @@ jobs:
           print("B6 real deterministic EDS XML: PASS")
           PY
 
+      - name: Build B7 traceability from real B4/B5/B6 outputs
+        run: |
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          from orbitfabric_eds_cfs_adapter.input_set import load_input_set
+          from orbitfabric_eds_cfs_adapter.profile import load_profile
+          from orbitfabric_eds_cfs_adapter.projection.eds_xml import serialize_eds_xml
+          from orbitfabric_eds_cfs_adapter.projection.model import build_projection_model
+          from orbitfabric_eds_cfs_adapter.projection.resolution import resolve_profile
+          from orbitfabric_eds_cfs_adapter.projection.traceability import (
+              build_traceability,
+              serialize_traceability,
+              validate_traceability,
+          )
+
+          root = Path("/tmp/eds-cfs-b1-integration-input")
+          core = load_input_set(root / "integration_input_manifest.json")
+          profile = load_profile(Path("tests/fixtures/p0_b3/profile.yaml"))
+          resolved = resolve_profile(profile, core)
+          model = build_projection_model(resolved)
+          xml_bytes = serialize_eds_xml(model)
+          traceability = build_traceability(resolved, model, xml_bytes)
+          actual = serialize_traceability(traceability)
+          expected = Path("tests/fixtures/p0_b7/expected.json").read_bytes()
+
+          validate_traceability(traceability)
+          assert actual == expected
+          assert len(actual) == 9198
+          assert hashlib.sha256(actual).hexdigest() == (
+              "d537a2b80658aa71e8f69af9fa0517318b009bf319db41653e406ff7d8a68c2e"
+          )
+          assert traceability["artifact"]["sha256"] == (
+              "4708a4e3c61d6d89cf0273e575855de8590fc1e6e3032846725a3c180f71b240"
+          )
+          mapped_sources = {
+              (source["domain"], source["id"])
+              for mapping in traceability["mappings"]
+              for source in mapping["sources"]
+          }
+          assert mapped_sources == {
+              ("commands", "payload.enable"),
+              ("commands", "payload.set_period"),
+              ("packets", "payload_status"),
+              ("telemetry", "payload.enabled"),
+              ("telemetry", "payload.sample_count"),
+          }
+
+          output = Path("/tmp/eds-cfs-p0-traceability.json")
+          output.write_bytes(actual)
+          print("B7 real machine-readable traceability: PASS")
+          PY
+
       - name: Print B1 generated set for review
         run: |
           for file in integration_input_manifest.json mission_snapshot.json entity_index.json relationship_manifest.json lint_report.json model_summary.json; do
@@ -322,4 +377,11 @@ jobs:
         with:
           name: eds-cfs-p0-b6-eds-xml
           path: /tmp/eds-cfs-p0.xml
+          if-no-files-found: error
+
+      - name: Upload B7 traceability
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p0-b7-traceability
+          path: /tmp/eds-cfs-p0-traceability.json
           if-no-files-found: error
