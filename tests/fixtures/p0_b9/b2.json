@@ -1,0 +1,95 @@
+{
+  "adapter": {
+    "id": "orbitfabric-eds-cfs",
+    "version": "0.1.0.dev0"
+  },
+  "artifacts": [
+    {
+      "derived_from_mappings": [],
+      "id": "eds.package",
+      "kind": "ccsds.sois.eds.xml",
+      "media_type": "application/xml",
+      "path": null,
+      "reason": "Core Integration Input Set is not compatible with this operation",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    },
+    {
+      "derived_from_mappings": [],
+      "id": "traceability",
+      "kind": "orbitfabric.eds_cfs.traceability",
+      "media_type": "application/json",
+      "path": null,
+      "reason": "Core Integration Input Set is not compatible with this operation",
+      "requirement": "required",
+      "retained_partial": false,
+      "sha256": null,
+      "status": "not_generated"
+    }
+  ],
+  "capabilities": [],
+  "coverage": {
+    "reason": "Core Integration Input Set is not compatible with this operation",
+    "records": [],
+    "scope": {
+      "domains": []
+    },
+    "status": "unavailable",
+    "summary": {}
+  },
+  "diagnostics": [
+    {
+      "code": "EDS-CFS-INPUT-001",
+      "id": "diag-001",
+      "message": "Core Integration Input Set is not compatible with this operation",
+      "owner": "integration",
+      "phase": "input_compatibility",
+      "producer": "orbitfabric-eds-cfs",
+      "profile_bindings": [],
+      "severity": "ERROR",
+      "sources": [],
+      "targets": []
+    }
+  ],
+  "evidence": [],
+  "external_tools": [],
+  "inputs": {
+    "core_input_set": {
+      "kind": null,
+      "reason": "Core Integration Input Set provenance was not established",
+      "sha256": null,
+      "status": "unavailable",
+      "version": null
+    },
+    "operation_inputs": [],
+    "profile": {
+      "id": null,
+      "kind": null,
+      "profile_version": null,
+      "reason": "Projection Profile provenance was not established",
+      "sha256": null,
+      "status": "unavailable",
+      "version": null
+    }
+  },
+  "integration": {
+    "id": "orbitfabric-eds-cfs",
+    "schema_version": null
+  },
+  "kind": "orbitfabric.integration_result",
+  "mappings": [],
+  "mission": {
+    "id": null,
+    "model_version": null,
+    "reason": "Mission provenance was not established from a compatible Core input",
+    "status": "unavailable"
+  },
+  "operation": {
+    "id": "eds_cfs_projection"
+  },
+  "resolutions": [],
+  "result": "failed",
+  "result_version": "0.2-candidate"
+}

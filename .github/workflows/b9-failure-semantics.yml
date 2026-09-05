@@ -1,0 +1,274 @@
+name: B9 Failure Semantics
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  b9-failure-semantics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install adapter and exact OrbitFabric Core 1.3.0 baseline
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install "orbitfabric @ git+https://github.com/FAROTECH/orbitfabric.git@a25917e81c90396df2b189834e83cf852fa4da5f"
+
+      - name: Materialize deterministic P0 mission workspace
+        run: |
+          rm -rf /tmp/orbitfabric-eds-cfs-p0-mission
+          mkdir -p /tmp/orbitfabric-eds-cfs-p0-mission
+          cp -a tests/fixtures/p0_b1/mission/. /tmp/orbitfabric-eds-cfs-p0-mission/
+
+      - name: Generate exact Core Integration Input Set
+        run: |
+          rm -rf /tmp/eds-cfs-b9-core-input
+          orbitfabric export integration-input-set /tmp/orbitfabric-eds-cfs-p0-mission \
+            --output-dir /tmp/eds-cfs-b9-core-input
+
+      - name: Prove B8 positive path is byte-stable
+        run: |
+          rm -rf /tmp/eds-cfs-b9-positive
+          orbitfabric-eds-cfs run \
+            --operation eds_cfs_projection \
+            --input-set-manifest /tmp/eds-cfs-b9-core-input/integration_input_manifest.json \
+            --profile tests/fixtures/p0_b3/profile.yaml \
+            --output-dir /tmp/eds-cfs-b9-positive
+          cmp tests/fixtures/p0_b8/expected.json \
+            /tmp/eds-cfs-b9-positive/integration_result.json
+          python -m orbitfabric.conformance.integration_contracts result \
+            src/orbitfabric_eds_cfs_adapter/integration_package.json \
+            /tmp/eds-cfs-b9-positive/integration_result.json
+
+      - name: Build deterministic B2 B3 B4 B5 negative inputs
+        run: |
+          rm -rf /tmp/eds-cfs-b9-negative
+          mkdir -p /tmp/eds-cfs-b9-negative/profiles
+          cp -a /tmp/eds-cfs-b9-core-input /tmp/eds-cfs-b9-negative/core-b2
+          printf '\n' >> /tmp/eds-cfs-b9-negative/core-b2/entity_index.json
+          python - <<'PY'
+          from copy import deepcopy
+          from pathlib import Path
+          import yaml
+
+          source = Path("tests/fixtures/p0_b3/profile.yaml")
+          profile = yaml.safe_load(source.read_text(encoding="utf-8"))
+          root = Path("/tmp/eds-cfs-b9-negative/profiles")
+
+          b3 = deepcopy(profile)
+          b3["bindings"][0]["config"] = {}
+
+          b4 = deepcopy(profile)
+          b4["bindings"][1]["config"]["function_code"] = 0
+
+          b5 = deepcopy(profile)
+          b5["bindings"][0]["config"]["function_code"] = 128
+
+          for name, value in (("b3", b3), ("b4", b4), ("b5", b5)):
+              (root / f"{name}.yaml").write_text(
+                  yaml.safe_dump(value, sort_keys=False),
+                  encoding="utf-8",
+              )
+          PY
+
+      - name: Execute B2 input compatibility failure
+        run: |
+          set +e
+          orbitfabric-eds-cfs run \
+            --operation eds_cfs_projection \
+            --input-set-manifest /tmp/eds-cfs-b9-negative/core-b2/integration_input_manifest.json \
+            --profile tests/fixtures/p0_b3/profile.yaml \
+            --output-dir /tmp/eds-cfs-b9-negative/out-b2
+          rc=$?
+          set -e
+          test "$rc" -eq 1
+
+      - name: Execute B3 profile schema failure
+        run: |
+          set +e
+          orbitfabric-eds-cfs run \
+            --operation eds_cfs_projection \
+            --input-set-manifest /tmp/eds-cfs-b9-core-input/integration_input_manifest.json \
+            --profile /tmp/eds-cfs-b9-negative/profiles/b3.yaml \
+            --output-dir /tmp/eds-cfs-b9-negative/out-b3
+          rc=$?
+          set -e
+          test "$rc" -eq 1
+
+      - name: Execute B4 source resolution failure
+        run: |
+          set +e
+          orbitfabric-eds-cfs run \
+            --operation eds_cfs_projection \
+            --input-set-manifest /tmp/eds-cfs-b9-core-input/integration_input_manifest.json \
+            --profile /tmp/eds-cfs-b9-negative/profiles/b4.yaml \
+            --output-dir /tmp/eds-cfs-b9-negative/out-b4
+          rc=$?
+          set -e
+          test "$rc" -eq 1
+
+      - name: Execute B5 projection validation failure
+        run: |
+          set +e
+          orbitfabric-eds-cfs run \
+            --operation eds_cfs_projection \
+            --input-set-manifest /tmp/eds-cfs-b9-core-input/integration_input_manifest.json \
+            --profile /tmp/eds-cfs-b9-negative/profiles/b5.yaml \
+            --output-dir /tmp/eds-cfs-b9-negative/out-b5
+          rc=$?
+          set -e
+          test "$rc" -eq 1
+
+      - name: Validate all failed Results with exact Core v1 checker
+        run: |
+          for layer in b2 b3 b4 b5; do
+            python -m orbitfabric.conformance.integration_contracts result \
+              src/orbitfabric_eds_cfs_adapter/integration_package.json \
+              "/tmp/eds-cfs-b9-negative/out-${layer}/integration_result.json"
+          done
+
+      - name: Audit B9 failure taxonomy provenance rollback coverage and golden bytes
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("/tmp/eds-cfs-b9-negative")
+          golden_root = Path("tests/fixtures/p0_b9")
+          expected = {
+              "b2": {
+                  "phase": "input_compatibility",
+                  "code": "EDS-CFS-INPUT-001",
+                  "core": "unavailable",
+                  "mission": "unavailable",
+                  "profile": "unavailable",
+                  "schema": None,
+                  "coverage": "unavailable",
+                  "size": 2472,
+                  "sha256": "62549d9a7aff558677d057fb0a46c0dd1c002a912fd836a4a66ab3f51fd78a13",
+              },
+              "b3": {
+                  "phase": "profile_schema",
+                  "code": "EDS-CFS-PROFILE-001",
+                  "core": "available",
+                  "mission": "available",
+                  "profile": "unavailable",
+                  "schema": None,
+                  "coverage": "unavailable",
+                  "size": 2376,
+                  "sha256": "5f57622b9c6d20484b3bb07e4f509775961cee2040ca605610d6d228bdb375eb",
+              },
+              "b4": {
+                  "phase": "source_resolution",
+                  "code": "EDS-CFS-RESOLVE-001",
+                  "core": "available",
+                  "mission": "available",
+                  "profile": "available",
+                  "schema": "0.1-candidate",
+                  "coverage": "unavailable",
+                  "size": 2579,
+                  "sha256": "7d4a3428de71d4e5903db0963e0de81cf17ed217dd60f50f19ccb11854d2880b",
+              },
+              "b5": {
+                  "phase": "projection_validation",
+                  "code": "EDS-CFS-PROJECT-001",
+                  "core": "available",
+                  "mission": "available",
+                  "profile": "available",
+                  "schema": "0.1-candidate",
+                  "coverage": "complete",
+                  "size": 4570,
+                  "sha256": "c515a5acf862cf60cda8be0760344a3d51a841cb78bfba3536bb5acab8e02093",
+              },
+          }
+
+          evidence = root / "evidence"
+          evidence.mkdir()
+          for layer, contract in expected.items():
+              output = root / f"out-{layer}"
+              files = {
+                  path.relative_to(output).as_posix()
+                  for path in output.rglob("*")
+                  if path.is_file()
+              }
+              assert files == {"integration_result.json"}
+
+              result_path = output / "integration_result.json"
+              data = result_path.read_bytes()
+              assert data == (golden_root / f"{layer}.json").read_bytes()
+              assert len(data) == contract["size"]
+              assert hashlib.sha256(data).hexdigest() == contract["sha256"]
+
+              result = json.loads(data)
+              assert result["result"] == "failed"
+              assert result["integration"]["schema_version"] == contract["schema"]
+              assert result["inputs"]["core_input_set"]["status"] == contract["core"]
+              assert result["mission"]["status"] == contract["mission"]
+              assert result["inputs"]["profile"]["status"] == contract["profile"]
+              assert result["inputs"]["operation_inputs"] == []
+              assert result["mappings"] == []
+              assert result["resolutions"] == []
+              assert result["evidence"] == []
+              assert result["external_tools"] == []
+              assert result["coverage"]["status"] == contract["coverage"]
+              diagnostic = result["diagnostics"][0]
+              assert diagnostic["owner"] == "integration"
+              assert diagnostic["severity"] == "ERROR"
+              assert diagnostic["phase"] == contract["phase"]
+              assert diagnostic["code"] == contract["code"]
+              assert all(item["path"] is None for item in result["artifacts"])
+              assert all(item["sha256"] is None for item in result["artifacts"])
+              assert all(not item["retained_partial"] for item in result["artifacts"])
+
+              if layer == "b5":
+                  assert result["coverage"]["summary"] == {"blocked": 5}
+                  assert all(
+                      record["state"] == "blocked"
+                      for record in result["coverage"]["records"]
+                  )
+
+              print(f"B9 {layer.upper()} failed Result size: {len(data)} bytes")
+              print(
+                  f"B9 {layer.upper()} failed Result sha256: "
+                  f"{hashlib.sha256(data).hexdigest()}"
+              )
+              (evidence / f"{layer}.json").write_bytes(data)
+          PY
+
+      - name: Prove unknown operation is non-destructive
+        run: |
+          rm -rf /tmp/eds-cfs-b9-unknown
+          cp -a /tmp/eds-cfs-b9-positive /tmp/eds-cfs-b9-unknown
+          find /tmp/eds-cfs-b9-unknown -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/unknown-before.sha256
+          set +e
+          orbitfabric-eds-cfs run \
+            --operation unknown \
+            --input-set-manifest /tmp/eds-cfs-b9-core-input/integration_input_manifest.json \
+            --profile tests/fixtures/p0_b3/profile.yaml \
+            --output-dir /tmp/eds-cfs-b9-unknown
+          rc=$?
+          set -e
+          test "$rc" -eq 2
+          find /tmp/eds-cfs-b9-unknown -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/unknown-after.sha256
+          cmp /tmp/unknown-before.sha256 /tmp/unknown-after.sha256
+
+      - name: Upload B9 failed Result evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p0-b9-failed-results
+          path: /tmp/eds-cfs-b9-negative/evidence
+          if-no-files-found: error
