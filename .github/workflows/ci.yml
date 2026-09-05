@@ -213,6 +213,61 @@ jobs:
           print("B4 real Profile/Core resolution: PASS")
           PY
 
+      - name: Build B5 model from real B4 resolution
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          from orbitfabric_eds_cfs_adapter.input_set import load_input_set
+          from orbitfabric_eds_cfs_adapter.profile import load_profile
+          from orbitfabric_eds_cfs_adapter.projection.model import (
+              EdsValidRange,
+              build_projection_model,
+          )
+          from orbitfabric_eds_cfs_adapter.projection.resolution import resolve_profile
+
+          root = Path("/tmp/eds-cfs-b1-integration-input")
+          core = load_input_set(root / "integration_input_manifest.json")
+          profile = load_profile(Path("tests/fixtures/p0_b3/profile.yaml"))
+          resolved = resolve_profile(profile, core)
+          model = build_projection_model(resolved)
+
+          assert [item.name for item in model.datatypes] == [
+              "CommandBase",
+              "PayloadEnableCmd",
+              "PayloadSetPeriod_Payload",
+              "PayloadSetPeriodCmd",
+              "PayloadStatusTlm_Payload",
+              "PayloadStatusTlm",
+          ]
+          period_payload = next(
+              item for item in model.datatypes if item.name == "PayloadSetPeriod_Payload"
+          )
+          assert period_payload.entries[0].type_ref == "BASE_TYPES/uint32"
+          assert period_payload.entries[0].valid_range == EdsValidRange(
+              minimum=100,
+              maximum=60000,
+              range_type="inclusiveMinInclusiveMax",
+          )
+          telemetry_payload = next(
+              item for item in model.datatypes if item.name == "PayloadStatusTlm_Payload"
+          )
+          assert [item.type_ref for item in telemetry_payload.entries] == [
+              "BASE_TYPES/StatusBit",
+              "BASE_TYPES/uint32",
+          ]
+          assert [(item.name, item.topic_id) for item in model.interfaces] == [
+              ("CMD", 160),
+              ("STATUS_TLM", 161),
+          ]
+          assert [(item.name, item.initial_value) for item in model.variables] == [
+              ("CMDTopicId", 160),
+              ("STATUSTLMTopicId", 161),
+          ]
+
+          print("B5 real internal projection model: PASS")
+          PY
+
       - name: Print B1 generated set for review
         run: |
           for file in integration_input_manifest.json mission_snapshot.json entity_index.json relationship_manifest.json lint_report.json model_summary.json; do
