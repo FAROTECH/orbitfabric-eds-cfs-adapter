@@ -77,10 +77,16 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "orbitfabric @ git+https://github.com/FAROTECH/orbitfabric.git@a25917e81c90396df2b189834e83cf852fa4da5f"
 
+      - name: Materialize deterministic B1 mission workspace
+        run: |
+          rm -rf /tmp/orbitfabric-eds-cfs-p0-mission
+          mkdir -p /tmp/orbitfabric-eds-cfs-p0-mission
+          cp -a tests/fixtures/p0_b1/mission/. /tmp/orbitfabric-eds-cfs-p0-mission/
+
       - name: Generate B1 Core Integration Input Set
         run: |
           rm -rf /tmp/eds-cfs-b1-integration-input
-          orbitfabric export integration-input-set tests/fixtures/p0_b1/mission \
+          orbitfabric export integration-input-set /tmp/orbitfabric-eds-cfs-p0-mission \
             --output-dir /tmp/eds-cfs-b1-integration-input
 
       - name: Validate B1 generated set
@@ -115,6 +121,16 @@ jobs:
               raise SystemExit("Mission did not load")
           if manifest["lint_result"] not in {"passed", "passed_with_warnings"}:
               raise SystemExit(f"Mission lint did not pass: {manifest['lint_result']}")
+
+          for name in (
+              "mission_snapshot.json",
+              "entity_index.json",
+              "relationship_manifest.json",
+              "model_summary.json",
+          ):
+              payload = json.loads((root / name).read_text())
+              if payload["source"]["mission_dir"] != "/tmp/orbitfabric-eds-cfs-p0-mission":
+                  raise SystemExit(f"Non-deterministic mission provenance in {name}")
 
           print("B1 Core Integration Input Set generation: PASS")
           PY
