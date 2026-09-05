@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "src" / "orbitfabric_eds_cfs_adapter"
 MANIFEST = PACKAGE / "integration_package.json"
 SCHEMA = PACKAGE / "schemas" / "profile-0.1.schema.json"
+TRACEABILITY_SCHEMA = PACKAGE / "schemas" / "traceability-0.1.schema.json"
 
 EXPECTED = {
     "distribution": "orbitfabric-eds-cfs-adapter",
@@ -86,6 +87,18 @@ def main() -> int:
     declared_digest = manifest["profile_schemas"][0]["sha256"]
     if schema_digest != declared_digest:
         _fail("Projection Profile schema digest mismatch")
+
+    if not TRACEABILITY_SCHEMA.is_file():
+        _fail("B7 traceability schema is missing")
+    traceability_schema = json.loads(TRACEABILITY_SCHEMA.read_text(encoding="utf-8"))
+    if traceability_schema["properties"]["kind"].get("const") != (
+        "orbitfabric.eds_cfs.traceability"
+    ):
+        _fail("B7 traceability schema kind mismatch")
+    if traceability_schema["properties"]["traceability_version"].get("const") != (
+        "0.1-candidate"
+    ):
+        _fail("B7 traceability schema version mismatch")
 
     if manifest["core_input_compatibility"] != EXPECTED_CORE_COMPATIBILITY:
         _fail("Core consumption declaration differs from Architecture Lab B2 freeze")
