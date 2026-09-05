@@ -229,9 +229,51 @@
     },
     {
       "binding": "cmd.payload-set-period",
-      "id": "resolution.commands.payload.set_period.argument.period_ms.type_ref",
+      "id": "resolution.commands.payload.set_period.argument.period_ms.maximum",
       "mapping": "mapping.commands.payload.set_period",
       "origin": "core",
+      "property": "eds.argument.period_ms.maximum",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "value": 60000
+    },
+    {
+      "binding": "cmd.payload-set-period",
+      "id": "resolution.commands.payload.set_period.argument.period_ms.minimum",
+      "mapping": "mapping.commands.payload.set_period",
+      "origin": "core",
+      "property": "eds.argument.period_ms.minimum",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "value": 100
+    },
+    {
+      "binding": "cmd.payload-set-period",
+      "id": "resolution.commands.payload.set_period.argument.period_ms.range_type",
+      "mapping": "mapping.commands.payload.set_period",
+      "origin": "adapter_default",
+      "property": "eds.argument.period_ms.range_type",
+      "sources": [
+        {
+          "domain": "commands",
+          "id": "payload.set_period"
+        }
+      ],
+      "value": "inclusiveMinInclusiveMax"
+    },
+    {
+      "binding": "cmd.payload-set-period",
+      "id": "resolution.commands.payload.set_period.argument.period_ms.type_ref",
+      "mapping": "mapping.commands.payload.set_period",
+      "origin": "adapter_default",
       "property": "eds.argument.period_ms.type_ref",
       "sources": [
         {
@@ -240,24 +282,6 @@
         }
       ],
       "value": "BASE_TYPES/uint32"
-    },
-    {
-      "binding": "cmd.payload-set-period",
-      "id": "resolution.commands.payload.set_period.argument.period_ms.valid_range",
-      "mapping": "mapping.commands.payload.set_period",
-      "origin": "core",
-      "property": "eds.argument.period_ms.valid_range",
-      "sources": [
-        {
-          "domain": "commands",
-          "id": "payload.set_period"
-        }
-      ],
-      "value": {
-        "maximum": 60000,
-        "minimum": 100,
-        "range_type": "inclusiveMinInclusiveMax"
-      }
     },
     {
       "binding": "cmd.payload-set-period",
@@ -305,7 +329,7 @@
       "binding": "packet.payload-status",
       "id": "resolution.telemetry.payload.enabled.type_ref",
       "mapping": "mapping.telemetry.payload.enabled",
-      "origin": "core",
+      "origin": "adapter_default",
       "property": "eds.type_ref",
       "sources": [
         {
@@ -319,7 +343,7 @@
       "binding": "packet.payload-status",
       "id": "resolution.telemetry.payload.sample_count.type_ref",
       "mapping": "mapping.telemetry.payload.sample_count",
-      "origin": "core",
+      "origin": "adapter_default",
       "property": "eds.type_ref",
       "sources": [
         {
