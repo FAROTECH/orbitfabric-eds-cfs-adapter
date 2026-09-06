@@ -39,6 +39,16 @@ require_sha256() {
   printf '%s %s\n' "$actual" "$path"
 }
 
+require_file() {
+  local path="$1"
+  local label="$2"
+  if [[ ! -f "$path" ]]; then
+    echo "$label not found: $path" >&2
+    return 1
+  fi
+  printf '%s %s\n' "$label" "$path"
+}
+
 run_positive_goal() {
   local goal="$1"
   local log="$2"
@@ -101,10 +111,23 @@ cp "$SOURCE_LIST" "$EVIDENCE_DIR/edstool-sources-SampleMission.mk"
 
 printf '%s\n' "Compiling complete native_eds mission"
 run_positive_goal native_eds.compile positive-compile.log
-[[ -f "$BUILD_DIR/stamp.compile" ]]
+require_file "$BUILD_DIR/stamp.compile" "native_eds compile stamp"
 
-[[ -f "$COMPILE_DB" ]]
-grep -F "of_demo_app.c" "$COMPILE_DB" > "$EVIDENCE_DIR/of-demo-compile-command.txt"
+if [[ ! -f "$COMPILE_DB" ]]; then
+  echo "compile database not found at expected path: $COMPILE_DB" >&2
+  echo "compile database candidates:" >&2
+  find "$BUILD_DIR" -type f -name 'compile_commands.json' -print | sort >&2
+  exit 1
+fi
+
+if ! grep -F "of_demo_app.c" "$COMPILE_DB" > "$EVIDENCE_DIR/of-demo-compile-command.txt"; then
+  echo "of_demo_app.c not found in compile database: $COMPILE_DB" >&2
+  echo "of_demo build-tree candidates:" >&2
+  find "$BUILD_DIR" -type f \
+    \( -name 'compile_commands.json' -o -iname '*of_demo*' -o -name 'stamp.compile' \) \
+    -print | sort >&2
+  exit 1
+fi
 
 find "$BUILD_DIR" -type f \
   \( -name 'of_demo_app.so' -o -name 'of_demo_app' -o -name 'libof_demo_app.so' \) \
@@ -116,7 +139,7 @@ fi
 
 printf '%s\n' "Installing complete native_eds mission"
 run_positive_goal native_eds.install positive-install.log
-[[ -f "$BUILD_DIR/stamp.install" ]]
+require_file "$BUILD_DIR/stamp.install" "native_eds install stamp"
 
 find "$BUILD_DIR/exe" -type f -iname '*of_demo_app*' -print | sort \
   > "$EVIDENCE_DIR/of-demo-staged-artifacts.txt"
