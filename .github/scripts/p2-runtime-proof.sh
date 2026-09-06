@@ -16,13 +16,14 @@ APP_ROOT="${RUN_ROOT}/orbitfabric-cfs-p2-runtime-apps"
 APP_DIR="${APP_ROOT}/of_demo_app"
 BUILD_DIR="${CFS_DIR}/build-native_eds"
 CPU_DIR="${BUILD_DIR}/exe/cpu1"
+CPU_CF_DIR="${CPU_DIR}/cf"
 HOST_DIR="${BUILD_DIR}/exe/host"
 EVIDENCE_DIR="${RUN_ROOT}/orbitfabric-eds-cfs-p2-runtime-evidence"
 B6_SOURCE="${ADAPTER_ROOT}/tests/fixtures/p0_b6/expected.xml"
 APP_SOURCE="${ADAPTER_ROOT}/examples/cfs/of_demo_app"
 STAGED_EDS="${APP_DIR}/eds/of_demo.xml"
 TO_SUB_SOURCE="${CFS_DIR}/sample_defs/tables/to_lab_sub.c"
-STARTUP_FILE="${CPU_DIR}/cfe_es_startup.scr"
+STARTUP_FILE="${CPU_CF_DIR}/cfe_es_startup.scr"
 CFS_LOG="${EVIDENCE_DIR}/cfs-runtime.log"
 TLM_LOG="${EVIDENCE_DIR}/tlm-recv.log"
 TO_ENABLE_LOG="${EVIDENCE_DIR}/to-enable-command.log"
@@ -59,6 +60,26 @@ require_sha256() {
     return 1
   fi
   printf '%s %s\n' "$actual" "$path"
+}
+
+require_file() {
+  local path="$1"
+  local label="$2"
+  if [[ ! -f "$path" ]]; then
+    echo "$label not found: $path" >&2
+    return 1
+  fi
+  printf '%s %s\n' "$label" "$path"
+}
+
+require_executable() {
+  local path="$1"
+  local label="$2"
+  if [[ ! -x "$path" ]]; then
+    echo "$label not executable: $path" >&2
+    return 1
+  fi
+  printf '%s %s\n' "$label" "$path"
 }
 
 wait_for_pattern() {
@@ -164,11 +185,18 @@ grep -F 'CFE_PLATFORM_TLM_TOPICID_TO_MIDV(161)' "$TO_SUB_SOURCE" \
   CFS_APP_PATH="$APP_ROOT" make native_eds.install
 ) 2>&1 | tee "$EVIDENCE_DIR/install.log"
 
-[[ -x "$CPU_DIR/core-cpu1" ]]
-[[ -f "$CPU_DIR/of_demo_app.so" ]]
-[[ -x "$HOST_DIR/cmd_send" ]]
-[[ -x "$HOST_DIR/tlm_recv" ]]
-[[ -f "$STARTUP_FILE" ]]
+{
+  printf '%s\n' '# P2 runtime staged paths'
+  find "$BUILD_DIR/exe" -type f \
+    \( -name 'core-cpu1' -o -name 'of_demo_app.so' -o -name 'cmd_send' -o -name 'tlm_recv' -o -name 'cfe_es_startup.scr' \) \
+    -print | sort
+} > "$EVIDENCE_DIR/runtime-staging-inventory.txt"
+
+require_executable "$CPU_DIR/core-cpu1" "staged core-cpu1"
+require_file "$CPU_CF_DIR/of_demo_app.so" "staged of_demo_app module"
+require_executable "$HOST_DIR/cmd_send" "staged EDS cmd_send"
+require_executable "$HOST_DIR/tlm_recv" "staged EDS tlm_recv"
+require_file "$STARTUP_FILE" "generated CPU1 startup script"
 
 cat >> "$STARTUP_FILE" <<'EOF'
 CFE_APP, of_demo_app, OF_DEMO_APP_Main, OF_DEMO_APP, 55, 32768, 0x0, 0;
