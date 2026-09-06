@@ -23,8 +23,34 @@ Current proof scope:
 P1
     compile and stage the application through native_eds
 
-P2
-    start the application and exercise command and telemetry behavior
+P2-A
+    run payload.enable through generated EDS dispatch
+    publish PayloadStatusTlm
+    decode PayloadEnabled=true through the same EDS database host-side
+
+P2-B
+    run payload.set_period through generated EDS dispatch
+    observe exact typed PeriodMs delivery for 1000, 99 and 60001
 ```
+
+## P2-B range observation
+
+The authoritative OrbitFabric command argument constraint is projected into EDS as:
+
+```text
+PeriodMs
+    type       uint32
+    ValidRange 100..60000 inclusive
+```
+
+The pinned P2-B runtime evidence shows that `cmd_send` and the generated dispatch path still deliver both `99` and `60001` to the typed application handler.
+
+The current `PayloadSetPeriodCmd` handler therefore intentionally **does not add a local hard-coded range check**. Its purpose is to preserve the observed downstream behavior as evidence and make the runtime boundary measurable.
+
+This is not production flight-software guidance.
+
+A production target application remains responsible for the executable command acceptance policy required by its mission unless a target-native generic validation mechanism consuming authoritative generated metadata is separately selected and proven.
+
+The reference proof must not silently duplicate the OrbitFabric `100..60000` constants merely to manufacture runtime rejection.
 
 NASA cFS and EdsLib sources remain external pinned dependencies and are not vendored here.

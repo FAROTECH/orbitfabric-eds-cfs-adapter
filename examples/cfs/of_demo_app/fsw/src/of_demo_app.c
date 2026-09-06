@@ -18,6 +18,7 @@ typedef struct
     CFE_SB_PipeId_t            CommandPipe;
     OF_DEMO_PayloadStatusTlm_t StatusTlm;
     uint32_t                   SampleCount;
+    uint32_t                   PeriodMs;
 } OF_DEMO_APP_Data_t;
 
 static OF_DEMO_APP_Data_t OF_DEMO_APP_Data;
@@ -71,11 +72,22 @@ static int32_t OF_DEMO_APP_PayloadEnableCmd(const OF_DEMO_PayloadEnableCmd_t *Ms
     return status;
 }
 
+static int32_t OF_DEMO_APP_PayloadSetPeriodCmd(const OF_DEMO_PayloadSetPeriodCmd_t *Msg)
+{
+    OF_DEMO_APP_Data.PeriodMs = Msg->Payload.PeriodMs;
+
+    CFE_ES_WriteToSysLog("OF_DEMO_APP: payload.set_period dispatched through generated EDS interface PeriodMs=%lu\n",
+                         (unsigned long)OF_DEMO_APP_Data.PeriodMs);
+
+    return CFE_SUCCESS;
+}
+
 static const EdsDispatchTable_EdsComponent_OF_DEMO_Application_CFE_SB_Telecommand_t OF_DEMO_APP_TC_DISPATCH_TABLE =
 {
     .CMD =
     {
-        .PayloadEnableCmd_indication = OF_DEMO_APP_PayloadEnableCmd
+        .PayloadEnableCmd_indication    = OF_DEMO_APP_PayloadEnableCmd,
+        .PayloadSetPeriodCmd_indication = OF_DEMO_APP_PayloadSetPeriodCmd
     }
 };
 
