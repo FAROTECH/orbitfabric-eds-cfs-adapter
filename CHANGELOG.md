@@ -4,11 +4,23 @@ All notable product changes will be documented here.
 
 ## Unreleased
 
-### P2 runtime proof in progress
+### P3 negative/conformance characterization complete
+
+- added a dedicated unknown Function Code runtime falsification on the frozen EDS-cFS lane;
+- proved that undefined FC 127 can reach the valid generated `payload.enable` typed handler on the pinned runtime;
+- added NASA sample_app and EdsLib derived-dispatch controls;
+- added an evidence-only EdsLib intervention that fails closed for an unmatched derived selector while preserving FC 0, FC 1 and a genuinely non-derived NASA command;
+- closed P3 as an evidence-backed characterization rather than claiming automatic unknown-command rejection;
+- added no adapter-local Function Code guard and made no Core or Projection Profile change.
+
+### P2 runtime proof complete
 
 - evolved the fixed `of_demo_app` from build consumer to EDS-backed runtime consumer;
 - added pinned generated-API and runtime proof harnesses;
-- runtime acceptance remains open and is not claimed complete yet.
+- proved `payload.enable` command dispatch and `PayloadStatusTlm` EDS encode/decode through the native cFS runtime lane;
+- proved typed `payload.set_period(PeriodMs)` delivery;
+- characterized projected `ValidRange 100..60000` versus runtime behavior, including retained `1000`, `99` and `60001` observations;
+- retained the ownership rule that projected constraints do not imply automatic runtime enforcement.
 
 ### P1 complete native build
 

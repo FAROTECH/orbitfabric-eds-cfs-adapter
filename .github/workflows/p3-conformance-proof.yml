@@ -1,0 +1,55 @@
+name: P3 Conformance Proof
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  p3-conformance-proof:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned-lane host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            pkg-config \
+            libexpat1-dev \
+            liblua5.3-dev \
+            libjson-c-dev \
+            python3-dev
+
+      - name: Execute raw P3 unknown-FC falsification
+        continue-on-error: true
+        run: bash .github/scripts/p3-conformance-proof.sh
+
+      - name: Run NASA sample_app unknown-command control
+        if: ${{ always() }}
+        run: bash .github/scripts/p3-nasa-sample-app-control.sh
+
+      - name: Run EdsLib derived-dispatch causal control
+        if: ${{ always() }}
+        run: bash .github/scripts/p3-edslib-derived-dispatch-control.sh
+
+      - name: Classify P3 unknown-command outcome
+        if: ${{ always() }}
+        run: bash .github/scripts/p3-postmortem.sh
+
+      - name: Evaluate P3 characterization acceptance
+        if: ${{ always() }}
+        run: bash .github/scripts/p3-acceptance.sh
+
+      - name: Upload P3 conformance evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p3-conformance-proof
+          path: ${{ runner.temp }}/orbitfabric-eds-cfs-p3-conformance-evidence
+          if-no-files-found: error
