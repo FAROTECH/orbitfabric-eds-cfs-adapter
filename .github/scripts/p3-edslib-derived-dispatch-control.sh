@@ -12,6 +12,7 @@ STARTUP_FILE="${CPU_CF_DIR}/cfe_es_startup.scr"
 EDSLIB_DISPATCHER="${CFS_DIR}/tools/eds/cfecfs/edsmsg/fsw/src/edsmsg_dispatcher.c"
 SAMPLE_APP_EDS="${CFS_DIR}/apps/sample_app/eds/sample_app.xml"
 SAMPLE_APP_CMDS="${CFS_DIR}/apps/sample_app/fsw/src/sample_app_cmds.c"
+SAMPLE_APP_MAIN="${CFS_DIR}/apps/sample_app/fsw/src/sample_app.c"
 EVIDENCE_DIR="${RUN_ROOT}/orbitfabric-eds-cfs-p3-conformance-evidence"
 CONTROL_RESULT="${EVIDENCE_DIR}/edslib-derived-dispatch-control.txt"
 PATCH_DIFF="${EVIDENCE_DIR}/edslib-derived-dispatch-control.patch"
@@ -75,7 +76,7 @@ if [[ ! -f "$EDSLIB_DISPATCHER" || ! -d "$BUILD_DIR" ]]; then
   echo "P3 EdsLib control requires the source/build tree retained by the P3 proof" >&2
   exit 1
 fi
-if [[ ! -f "$SAMPLE_APP_EDS" || ! -f "$SAMPLE_APP_CMDS" ]]; then
+if [[ ! -f "$SAMPLE_APP_EDS" || ! -f "$SAMPLE_APP_CMDS" || ! -f "$SAMPLE_APP_MAIN" ]]; then
   echo "P3 EdsLib control requires the pinned NASA sample_app source tree" >&2
   exit 1
 fi
@@ -166,25 +167,38 @@ if ! grep -F 'DerivTypeInfo.NumDerivatives > 0' "$PATCH_DIFF" >/dev/null 2>&1; t
   exit 1
 fi
 
-# Add one evidence-only syslog marker to the genuine NASA non-derived handler.
-# This changes no dispatch or command semantics; it only gives F4 an observable
-# handler boundary in a fresh runtime with the scheduler disabled.
-python3 - "$SAMPLE_APP_CMDS" <<'PY'
+# Add evidence-only observability to the genuine NASA non-derived path:
+# one handler marker and the exact MsgId value the app itself subscribes to.
+# Neither changes dispatch or command semantics.
+python3 - "$SAMPLE_APP_CMDS" "$SAMPLE_APP_MAIN" <<'PY'
 from pathlib import Path
 import sys
 
-path = Path(sys.argv[1])
-text = path.read_text()
-old = """CFE_Status_t SAMPLE_APP_SendHkCmd(const SAMPLE_APP_SendHkCmd_t *Msg)\n{\n    int i;\n"""
-new = """CFE_Status_t SAMPLE_APP_SendHkCmd(const SAMPLE_APP_SendHkCmd_t *Msg)\n{\n    int i;\n\n    CFE_ES_WriteToSysLog(\"P3 F4: SAMPLE_APP SendHk non-derived handler invoked\\n\");\n"""
-if old not in text:
+cmds_path = Path(sys.argv[1])
+main_path = Path(sys.argv[2])
+
+cmds_text = cmds_path.read_text()
+old_cmds = """CFE_Status_t SAMPLE_APP_SendHkCmd(const SAMPLE_APP_SendHkCmd_t *Msg)\n{\n    int i;\n"""
+new_cmds = """CFE_Status_t SAMPLE_APP_SendHkCmd(const SAMPLE_APP_SendHkCmd_t *Msg)\n{\n    int i;\n\n    CFE_ES_WriteToSysLog(\"P3 F4: SAMPLE_APP SendHk non-derived handler invoked\\n\");\n"""
+if old_cmds not in cmds_text:
     raise SystemExit("SAMPLE_APP_SendHkCmd instrumentation anchor not found")
-path.write_text(text.replace(old, new, 1))
+cmds_path.write_text(cmds_text.replace(old_cmds, new_cmds, 1))
+
+main_text = main_path.read_text()
+old_main = """        /*\n        ** Subscribe to Housekeeping request commands\n        */\n        status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(SAMPLE_APP_SEND_HK_MID), SAMPLE_APP_Data.CommandPipe);\n"""
+new_main = """        /*\n        ** Subscribe to Housekeeping request commands\n        */\n        CFE_ES_WriteToSysLog(\n            \"P3 F4: SAMPLE_APP SendHk MID=0x%08X\\n\",\n            (unsigned int)CFE_SB_MsgIdToValue(CFE_SB_ValueToMsgId(SAMPLE_APP_SEND_HK_MID)));\n        status = CFE_SB_Subscribe(CFE_SB_ValueToMsgId(SAMPLE_APP_SEND_HK_MID), SAMPLE_APP_Data.CommandPipe);\n"""
+if old_main not in main_text:
+    raise SystemExit("SAMPLE_APP SendHk subscription instrumentation anchor not found")
+main_path.write_text(main_text.replace(old_main, new_main, 1))
 PY
 
-git -C "$CFS_DIR/apps/sample_app" diff -- fsw/src/sample_app_cmds.c > "$SAMPLE_INSTRUMENTATION_DIFF"
+git -C "$CFS_DIR/apps/sample_app" diff -- fsw/src/sample_app_cmds.c fsw/src/sample_app.c > "$SAMPLE_INSTRUMENTATION_DIFF"
 if ! grep -F 'P3 F4: SAMPLE_APP SendHk non-derived handler invoked' "$SAMPLE_INSTRUMENTATION_DIFF" >/dev/null 2>&1; then
-  echo "P3 F4 sample_app instrumentation was not materialized" >&2
+  echo "P3 F4 sample_app handler instrumentation was not materialized" >&2
+  exit 1
+fi
+if ! grep -F 'P3 F4: SAMPLE_APP SendHk MID=' "$SAMPLE_INSTRUMENTATION_DIFF" >/dev/null 2>&1; then
+  echo "P3 F4 sample_app MsgId instrumentation was not materialized" >&2
   exit 1
 fi
 
@@ -349,7 +363,9 @@ fi
 # F4: prove the candidate distinction does not break a genuinely non-derived
 # EDS telecommand. Use the pinned NASA SAMPLE_APP/SEND_HK interface itself.
 # Restart without sch_lab so the handler cannot be reached by periodic schedule
-# traffic; only the explicit EDS command below can produce the retained marker.
+# traffic. Derive the exact MsgId from the value used by sample_app itself, then
+# use PassThrough only as evidence instrumentation to inject the corresponding
+# structurally valid header-only cfsv1 command.
 # -----------------------------------------------------------------------------
 stop_runtime
 sleep 1
@@ -368,21 +384,42 @@ wait_for_pattern "$NONDERIVED_RUNTIME_LOG" 'Sample App Initialized' \
   'P3 F4 NASA sample_app initialization observed'
 wait_for_pattern "$NONDERIVED_RUNTIME_LOG" 'CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state' \
   'P3 F4 cFS operational state observed'
+wait_for_pattern "$NONDERIVED_RUNTIME_LOG" 'P3 F4: SAMPLE_APP SendHk MID=0x[0-9A-Fa-f]+' \
+  'P3 F4 runtime-derived SAMPLE_APP SendHk MsgId observed'
 
 if grep -F 'P3 F4: SAMPLE_APP SendHk non-derived handler invoked' "$NONDERIVED_RUNTIME_LOG" >/dev/null 2>&1; then
   echo "P3 F4 non-derived handler was invoked before the explicit probe" >&2
   exit 1
 fi
 
+NONDERIVED_MID_HEX="$(
+  grep -E 'P3 F4: SAMPLE_APP SendHk MID=0x[0-9A-Fa-f]+' "$NONDERIVED_RUNTIME_LOG" \
+    | tail -n 1 \
+    | sed -E 's/.*MID=0x([0-9A-Fa-f]+).*/\1/'
+)"
+if [[ -z "$NONDERIVED_MID_HEX" ]]; then
+  echo "P3 F4 could not derive SAMPLE_APP SendHk MsgId from runtime" >&2
+  exit 1
+fi
+NONDERIVED_APID="$(python3 - "$NONDERIVED_MID_HEX" <<'PY'
+import sys
+print(hex(int(sys.argv[1], 16) & 0x07ff))
+PY
+)"
+
 NONDERIVED_BEFORE="$(wc -l < "$NONDERIVED_RUNTIME_LOG")"
 (
   cd "$HOST_DIR"
-  ./cmd_send -v -I SAMPLE_APP/SEND_HK
+  ./cmd_send -v -Q cfsv1 -A "$NONDERIVED_APID" -C 0
 ) > "$NONDERIVED_CMD_LOG" 2>&1
 
-if ! grep -F 'Using result from EDS encoder' "$NONDERIVED_CMD_LOG" >/dev/null 2>&1; then
-  echo "P3 F4 SAMPLE_APP/SEND_HK did not use EDS encoder" >&2
+if ! grep -F 'Using result from PassThrough encoder' "$NONDERIVED_CMD_LOG" >/dev/null 2>&1; then
+  echo "P3 F4 SAMPLE_APP/SEND_HK probe did not use PassThrough encoder" >&2
   cat "$NONDERIVED_CMD_LOG" >&2
+  exit 1
+fi
+if grep -F 'Using result from EDS encoder' "$NONDERIVED_CMD_LOG" >/dev/null 2>&1; then
+  echo "P3 F4 SAMPLE_APP/SEND_HK probe unexpectedly used EDS encoder" >&2
   exit 1
 fi
 
@@ -407,7 +444,10 @@ done
 {
   printf '%s\n' 'nonderived_control_interface=SAMPLE_APP/SEND_HK'
   printf '%s\n' 'nonderived_control_model=GENUINELY_NON_DERIVED_TELECOMMAND'
-  printf '%s\n' 'nonderived_control_encoder=EDS'
+  printf '%s\n' 'nonderived_control_encoder=PassThrough'
+  printf '%s\n' 'nonderived_control_injection=runtime_derived_cfsv1_header_only'
+  printf 'nonderived_runtime_mid=0x%s\n' "$NONDERIVED_MID_HEX"
+  printf 'nonderived_runtime_apid=%s\n' "$NONDERIVED_APID"
   printf 'nonderived_handler_observed=%s\n' "$NONDERIVED_OBSERVED"
   printf '%s\n' '# non-derived relevant runtime evidence'
   grep -E 'P3 F4: SAMPLE_APP SendHk non-derived handler invoked|SAMPLE: Invalid ground command code' \
