@@ -14,6 +14,8 @@ P2_EVIDENCE_DIR="${RUN_ROOT}/orbitfabric-eds-cfs-p2-runtime-evidence"
 P3_EVIDENCE_DIR="${RUN_ROOT}/orbitfabric-eds-cfs-p3-conformance-evidence"
 P3_CFS_LOG="${P3_EVIDENCE_DIR}/p3-runtime.log"
 P3_UNKNOWN_CMD_LOG="${P3_EVIDENCE_DIR}/unknown-function-code-command.log"
+P3_PROBE_START_LINE="${P3_EVIDENCE_DIR}/unknown-function-code-probe-start-line.txt"
+P3_AFTER_PROBE_LOG="${P3_EVIDENCE_DIR}/unknown-function-code-runtime-after-probe.log"
 P3_RESULT="${P3_EVIDENCE_DIR}/unknown-function-code-result.txt"
 UNKNOWN_FUNCTION_CODE="127"
 
@@ -100,9 +102,9 @@ if grep -F 'of_demo_app' "$STARTUP_FILE" >/dev/null 2>&1; then
   exit 1
 fi
 
-cat >> "$STARTUP_FILE" <<'EOF'
+cat >> "$STARTUP_FILE" <<'EOF_STARTUP'
 CFE_APP, of_demo_app, OF_DEMO_APP_Main, OF_DEMO_APP, 55, 32768, 0x0, 0;
-EOF
+EOF_STARTUP
 
 (
   cd "$CPU_DIR"
@@ -134,7 +136,10 @@ print(hex(mid & 0x07FF))
 PY
 )"
 
+# Retain the exact log boundary before sending the invalid probe. This makes
+# handler attribution mechanical even when the proof intentionally fails.
 CFS_BEFORE="$(wc -l < "$P3_CFS_LOG")"
+printf '%s\n' "$CFS_BEFORE" > "$P3_PROBE_START_LINE"
 
 # This is deliberately NOT a product command path. The unknown command does
 # not exist in EDS, so the pinned NASA cmd_send PassThrough encoder is used
@@ -162,45 +167,71 @@ if grep -F 'Using result from EDS encoder' "$P3_UNKNOWN_CMD_LOG" >/dev/null 2>&1
   exit 1
 fi
 
-FIRST_REJECTING_BOUNDARY=""
+CLASSIFICATION=""
+FIRST_OBSERVED_BOUNDARY=""
+VALID_HANDLER="none"
 NEW_RUNTIME=""
+
 for attempt in $(seq 1 20); do
   NEW_RUNTIME="$(tail -n +$((CFS_BEFORE + 1)) "$P3_CFS_LOG")"
 
+  # A valid typed handler is the strongest P3 stop/reopen signal. Check this
+  # before waiting for a rejection diagnostic so the evidence cannot time out
+  # while the invalid command has already crossed the generated boundary.
+  if grep -F 'OF_DEMO_APP: payload.enable dispatched through generated EDS interface' \
+    <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
+    CLASSIFICATION="VALID_TYPED_HANDLER_INVOKED"
+    FIRST_OBSERVED_BOUNDARY="GENERATED_OF_DEMO_TYPED_HANDLER"
+    VALID_HANDLER="payload.enable"
+    break
+  fi
+
+  if grep -F 'OF_DEMO_APP: payload.set_period dispatched through generated EDS interface' \
+    <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
+    CLASSIFICATION="VALID_TYPED_HANDLER_INVOKED"
+    FIRST_OBSERVED_BOUNDARY="GENERATED_OF_DEMO_TYPED_HANDLER"
+    VALID_HANDLER="payload.set_period"
+    break
+  fi
+
   if grep -E 'EdsLib_DataTypeDB_UnpackPartialObject\(Payload\):|EdsLib_DataTypeDB_VerifyUnpackedObject\(\):|CI_LAB: Ingest failed' \
     <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
-    FIRST_REJECTING_BOUNDARY="CI_LAB_EDS_INGRESS"
+    CLASSIFICATION="REJECTED_AT_CI_LAB_EDS_INGRESS"
+    FIRST_OBSERVED_BOUNDARY="CI_LAB_EDS_INGRESS"
     break
   fi
 
   if grep -F 'OF_DEMO_APP: generated EDS dispatch rejected command' \
     <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
-    FIRST_REJECTING_BOUNDARY="GENERATED_OF_DEMO_DISPATCH"
+    CLASSIFICATION="REJECTED_AT_GENERATED_OF_DEMO_DISPATCH"
+    FIRST_OBSERVED_BOUNDARY="GENERATED_OF_DEMO_DISPATCH"
     break
   fi
 
   if ! kill -0 "$CFS_PID" 2>/dev/null; then
-    echo "cFS exited while waiting for P3 unknown Function Code classification" >&2
-    exit 1
+    CLASSIFICATION="RUNTIME_EXITED_BEFORE_CLASSIFICATION"
+    FIRST_OBSERVED_BOUNDARY="CFS_RUNTIME"
+    break
   fi
   sleep 1
 done
 
-if [[ -z "$FIRST_REJECTING_BOUNDARY" ]]; then
-  echo "P3 unknown Function Code reached no observable EDS-aware rejection boundary" >&2
-  cat "$P3_UNKNOWN_CMD_LOG" >&2 || true
-  tail -n 100 "$P3_CFS_LOG" >&2 || true
-  exit 1
+NEW_RUNTIME="$(tail -n +$((CFS_BEFORE + 1)) "$P3_CFS_LOG")"
+printf '%s\n' "$NEW_RUNTIME" > "$P3_AFTER_PROBE_LOG"
+
+if [[ -z "$CLASSIFICATION" ]]; then
+  CLASSIFICATION="NO_OBSERVABLE_RESULT"
+  FIRST_OBSERVED_BOUNDARY="none"
 fi
 
-# The negative probe must never turn into either valid generated OF_DEMO
-# operation. Only lines after the probe was sent are considered here.
-NEW_RUNTIME="$(tail -n +$((CFS_BEFORE + 1)) "$P3_CFS_LOG")"
-if grep -E 'OF_DEMO_APP: payload\.(enable|set_period) dispatched through generated EDS interface' \
-  <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
-  echo "P3 unknown Function Code crossed the EDS boundary as a valid typed OF_DEMO operation" >&2
-  printf '%s\n' "$NEW_RUNTIME" >&2
-  exit 1
+TARGET_INGRESS_OBSERVED="false"
+VALID_TYPED_HANDLER_INVOKED="false"
+if [[ "$CLASSIFICATION" == "VALID_TYPED_HANDLER_INVOKED" ]]; then
+  TARGET_INGRESS_OBSERVED="true"
+  VALID_TYPED_HANDLER_INVOKED="true"
+elif [[ "$CLASSIFICATION" == "REJECTED_AT_CI_LAB_EDS_INGRESS" \
+     || "$CLASSIFICATION" == "REJECTED_AT_GENERATED_OF_DEMO_DISPATCH" ]]; then
+  TARGET_INGRESS_OBSERVED="true"
 fi
 
 {
@@ -210,16 +241,49 @@ fi
   printf 'unknown_function_code=%s\n' "$UNKNOWN_FUNCTION_CODE"
   printf '%s\n' 'host_encoder=PassThrough'
   printf '%s\n' 'host_eds_encoder_used=false'
-  printf '%s\n' 'target_ingress_observed=true'
-  printf 'first_rejecting_boundary=%s\n' "$FIRST_REJECTING_BOUNDARY"
-  printf '%s\n' 'valid_generated_typed_handler_invoked=false'
-  printf '%s\n' '# relevant target diagnostics'
-  grep -E 'EdsLib_DataTypeDB_UnpackPartialObject\(Payload\):|EdsLib_DataTypeDB_VerifyUnpackedObject\(\):|CI_LAB: Ingest failed|OF_DEMO_APP: generated EDS dispatch rejected command' \
+  printf 'probe_runtime_start_line=%s\n' "$CFS_BEFORE"
+  printf 'classification=%s\n' "$CLASSIFICATION"
+  printf 'first_observed_boundary=%s\n' "$FIRST_OBSERVED_BOUNDARY"
+  printf 'target_ingress_observed=%s\n' "$TARGET_INGRESS_OBSERVED"
+  printf 'valid_generated_typed_handler_invoked=%s\n' "$VALID_TYPED_HANDLER_INVOKED"
+  printf 'valid_handler=%s\n' "$VALID_HANDLER"
+  printf '%s\n' '# relevant target diagnostics after probe'
+  grep -E 'OF_DEMO_APP: payload\.(enable|set_period) dispatched through generated EDS interface|OF_DEMO_APP: generated EDS dispatch rejected command|EdsLib_DataTypeDB_UnpackPartialObject\(Payload\):|EdsLib_DataTypeDB_VerifyUnpackedObject\(\):|CI_LAB: Ingest failed' \
     <<<"$NEW_RUNTIME" || true
 } > "$P3_RESULT"
+
+case "$CLASSIFICATION" in
+  VALID_TYPED_HANDLER_INVOKED)
+    echo "P3 stop/reopen: unknown Function Code invoked valid typed handler ${VALID_HANDLER}" >&2
+    cat "$P3_RESULT" >&2
+    exit 1
+    ;;
+  REJECTED_AT_CI_LAB_EDS_INGRESS|REJECTED_AT_GENERATED_OF_DEMO_DISPATCH)
+    ;;
+  NO_OBSERVABLE_RESULT)
+    echo "P3 unknown Function Code produced no observable target result" >&2
+    cat "$P3_UNKNOWN_CMD_LOG" >&2 || true
+    tail -n 100 "$P3_CFS_LOG" >&2 || true
+    exit 1
+    ;;
+  *)
+    echo "P3 unknown Function Code classification failed: ${CLASSIFICATION}" >&2
+    cat "$P3_RESULT" >&2
+    exit 1
+    ;;
+esac
+
+# Even when a rejection boundary was observed, the same post-probe slice must
+# not contain a valid generated OF_DEMO operation.
+if grep -E 'OF_DEMO_APP: payload\.(enable|set_period) dispatched through generated EDS interface' \
+  <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
+  echo "P3 unknown Function Code crossed the EDS boundary as a valid typed OF_DEMO operation" >&2
+  printf '%s\n' "$NEW_RUNTIME" >&2
+  exit 1
+fi
 
 kill "$CFS_PID" 2>/dev/null || true
 wait "$CFS_PID" 2>/dev/null || true
 CFS_PID=""
 
-printf '%s\n' "P3-C2 unknown Function Code conformance probe completed at ${FIRST_REJECTING_BOUNDARY}"
+printf '%s\n' "P3-C2 unknown Function Code conformance probe completed at ${FIRST_OBSERVED_BOUNDARY}"
