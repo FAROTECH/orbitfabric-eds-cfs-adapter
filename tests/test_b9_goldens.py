@@ -26,14 +26,14 @@ GOLDENS = {
     },
     "b4": {
         "size": 2579,
-        "sha256": "7d4a3428de71d4e5903db0963e0de81cf17ed217dd60f50f19ccb11854d2880b",
+        "sha256": "7a0824c77344c08814c76c090c1b06aaac5007e864e2712eadcd1ab9c411adf7",
         "phase": "source_resolution",
         "code": "EDS-CFS-RESOLVE-001",
         "coverage": "unavailable",
     },
     "b5": {
         "size": 4570,
-        "sha256": "c515a5acf862cf60cda8be0760344a3d51a841cb78bfba3536bb5acab8e02093",
+        "sha256": "014a9c634f4a0e110f688f37e6ce8cd67ae82c4eb3a1219beabcff6b0d0822d0",
         "phase": "projection_validation",
         "code": "EDS-CFS-PROJECT-001",
         "coverage": "complete",
