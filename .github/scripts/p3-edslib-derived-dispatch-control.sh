@@ -10,13 +10,19 @@ CPU_CF_DIR="${CPU_DIR}/cf"
 HOST_DIR="${BUILD_DIR}/exe/host"
 STARTUP_FILE="${CPU_CF_DIR}/cfe_es_startup.scr"
 EDSLIB_DISPATCHER="${CFS_DIR}/tools/eds/cfecfs/edsmsg/fsw/src/edsmsg_dispatcher.c"
+SAMPLE_APP_EDS="${CFS_DIR}/apps/sample_app/eds/sample_app.xml"
+SAMPLE_APP_CMDS="${CFS_DIR}/apps/sample_app/fsw/src/sample_app_cmds.c"
 EVIDENCE_DIR="${RUN_ROOT}/orbitfabric-eds-cfs-p3-conformance-evidence"
 CONTROL_RESULT="${EVIDENCE_DIR}/edslib-derived-dispatch-control.txt"
 PATCH_DIFF="${EVIDENCE_DIR}/edslib-derived-dispatch-control.patch"
+SAMPLE_INSTRUMENTATION_DIFF="${EVIDENCE_DIR}/sample-app-send-hk-instrumentation.patch"
+NONDERIVED_MODEL="${EVIDENCE_DIR}/sample-app-send-hk-nonderived-model.txt"
 RUNTIME_LOG="${EVIDENCE_DIR}/edslib-derived-dispatch-control-runtime.log"
 ENABLE_LOG="${EVIDENCE_DIR}/edslib-derived-dispatch-control-enable.log"
 SET_PERIOD_LOG="${EVIDENCE_DIR}/edslib-derived-dispatch-control-set-period.log"
 UNKNOWN_LOG="${EVIDENCE_DIR}/edslib-derived-dispatch-control-unknown.log"
+NONDERIVED_RUNTIME_LOG="${EVIDENCE_DIR}/edslib-nonderived-send-hk-runtime.log"
+NONDERIVED_CMD_LOG="${EVIDENCE_DIR}/edslib-nonderived-send-hk-command.log"
 BUILD_LOG="${EVIDENCE_DIR}/edslib-derived-dispatch-control-build.log"
 UNKNOWN_FUNCTION_CODE="127"
 
@@ -30,6 +36,16 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+stop_runtime() {
+  set +e
+  if [[ -n "$CFS_PID" ]]; then
+    kill "$CFS_PID" 2>/dev/null || true
+    wait "$CFS_PID" 2>/dev/null || true
+    CFS_PID=""
+  fi
+  set -e
+}
 
 wait_for_pattern() {
   local path="$1"
@@ -59,23 +75,66 @@ if [[ ! -f "$EDSLIB_DISPATCHER" || ! -d "$BUILD_DIR" ]]; then
   echo "P3 EdsLib control requires the source/build tree retained by the P3 proof" >&2
   exit 1
 fi
+if [[ ! -f "$SAMPLE_APP_EDS" || ! -f "$SAMPLE_APP_CMDS" ]]; then
+  echo "P3 EdsLib control requires the pinned NASA sample_app source tree" >&2
+  exit 1
+fi
 
 if [[ "$(git -C "$CFS_DIR/tools/eds" rev-parse HEAD)" != "2acc963b34f77692c6396555dcfb10ef43eb1046" ]]; then
   echo "P3 EdsLib control is not running against the frozen EdsLib commit" >&2
   exit 1
 fi
+if [[ "$(git -C "$CFS_DIR/apps/sample_app" rev-parse HEAD)" != "2f93d1a4159a02b18d67ee83342c9e96b90e23e4" ]]; then
+  echo "P3 EdsLib control is not running against the frozen NASA sample_app commit" >&2
+  exit 1
+fi
+
+# Prove from the pinned NASA EDS that SAMPLE_APP/SEND_HK is the genuine
+# non-derived CASE A needed by Architecture Lab Investigation 020 F4.
+python3 - "$SAMPLE_APP_EDS" "$NONDERIVED_MODEL" <<'PY'
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+source = Path(sys.argv[1])
+out = Path(sys.argv[2])
+root = ET.parse(source).getroot()
+ns = {"s": "http://www.ccsds.org/schema/sois/seds"}
+
+send_hk = root.find(".//s:ContainerDataType[@name='SendHkCmd']", ns)
+if send_hk is None:
+    raise SystemExit("SendHkCmd EDS type not found")
+if send_hk.get("baseType") != "CFE_HDR/CommandHeader":
+    raise SystemExit("SendHkCmd is not based directly on CFE_HDR/CommandHeader")
+
+derivatives = root.findall(".//s:ContainerDataType[@baseType='SendHkCmd']", ns)
+if derivatives:
+    raise SystemExit("SendHkCmd unexpectedly has derived container types")
+
+maps = root.findall(".//s:Interface[@name='SEND_HK']/s:GenericTypeMapSet/s:GenericTypeMap", ns)
+if not any(m.get("name") == "TelecommandDataType" and m.get("type") == "SendHkCmd" for m in maps):
+    raise SystemExit("SEND_HK does not map TelecommandDataType directly to SendHkCmd")
+
+out.write_text(
+    "interface=SAMPLE_APP/SEND_HK\n"
+    "telecommand_data_type=SendHkCmd\n"
+    "base_type=CFE_HDR/CommandHeader\n"
+    "derived_type_count=0\n"
+    "classification=GENUINELY_NON_DERIVED_TELECOMMAND\n"
+)
+PY
 
 # -----------------------------------------------------------------------------
 # Evidence-only semantic pressure test.
 #
-# Do not turn this patch into product code.  It exists only in the disposable
+# Do not turn this patch into product code. It exists only in the disposable
 # GitHub Actions source tree to test the ownership hypothesis opened by
 # Architecture Lab Investigation 020.
 #
 # The current dispatcher treats every IdentifyBufferWithSize() failure as a
-# non-derived argument and selects dispatch position zero.  The candidate
+# non-derived argument and selects dispatch position zero. The candidate
 # behavior below preserves position zero only when the base container actually
-# reports zero derivatives.  If the base has derivatives but no derivative was
+# reports zero derivatives. If the base has derivatives but no derivative was
 # identified, dispatch fails closed.
 # -----------------------------------------------------------------------------
 python3 - "$EDSLIB_DISPATCHER" <<'PY'
@@ -107,8 +166,30 @@ if ! grep -F 'DerivTypeInfo.NumDerivatives > 0' "$PATCH_DIFF" >/dev/null 2>&1; t
   exit 1
 fi
 
-# Rebuild only the disposable frozen cFS/native_eds workspace.  The adapter
-# repository and generated EDS fixture remain byte-for-byte unchanged.
+# Add one evidence-only syslog marker to the genuine NASA non-derived handler.
+# This changes no dispatch or command semantics; it only gives F4 an observable
+# handler boundary in a fresh runtime with the scheduler disabled.
+python3 - "$SAMPLE_APP_CMDS" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+old = """CFE_Status_t SAMPLE_APP_SendHkCmd(const SAMPLE_APP_SendHkCmd_t *Msg)\n{\n    int i;\n"""
+new = """CFE_Status_t SAMPLE_APP_SendHkCmd(const SAMPLE_APP_SendHkCmd_t *Msg)\n{\n    int i;\n\n    CFE_ES_WriteToSysLog(\"P3 F4: SAMPLE_APP SendHk non-derived handler invoked\\n\");\n"""
+if old not in text:
+    raise SystemExit("SAMPLE_APP_SendHkCmd instrumentation anchor not found")
+path.write_text(text.replace(old, new, 1))
+PY
+
+git -C "$CFS_DIR/apps/sample_app" diff -- fsw/src/sample_app_cmds.c > "$SAMPLE_INSTRUMENTATION_DIFF"
+if ! grep -F 'P3 F4: SAMPLE_APP SendHk non-derived handler invoked' "$SAMPLE_INSTRUMENTATION_DIFF" >/dev/null 2>&1; then
+  echo "P3 F4 sample_app instrumentation was not materialized" >&2
+  exit 1
+fi
+
+# Rebuild only the disposable frozen cFS/native_eds workspace. The adapter
+# repository and generated OF_DEMO EDS fixture remain byte-for-byte unchanged.
 (
   cd "$CFS_DIR"
   CFS_APP_PATH="$APP_ROOT" make native_eds.compile
@@ -120,8 +201,8 @@ if [[ ! -x "$CPU_DIR/core-cpu1" || ! -x "$HOST_DIR/cmd_send" || ! -f "$STARTUP_F
   exit 1
 fi
 
-# native_eds.install regenerates the baseline startup file.  Load the same
-# already-proven OF_DEMO module for this isolated control runtime.
+# native_eds.install regenerates the baseline startup file. Load the same
+# already-proven OF_DEMO module for the first isolated control runtime.
 if grep -F 'of_demo_app' "$STARTUP_FILE" >/dev/null 2>&1; then
   echo "P3 EdsLib control expected regenerated startup without OF_DEMO" >&2
   exit 1
@@ -264,4 +345,81 @@ if [[ "$UNKNOWN_CLASSIFICATION" != "REJECTED_AT_GENERATED_OF_DEMO_DISPATCH" ]]; 
   exit 1
 fi
 
-printf '%s\n' 'P3 EdsLib derived-dispatch control PASS'
+# -----------------------------------------------------------------------------
+# F4: prove the candidate distinction does not break a genuinely non-derived
+# EDS telecommand. Use the pinned NASA SAMPLE_APP/SEND_HK interface itself.
+# Restart without sch_lab so the handler cannot be reached by periodic schedule
+# traffic; only the explicit EDS command below can produce the retained marker.
+# -----------------------------------------------------------------------------
+stop_runtime
+sleep 1
+
+F4_STARTUP="${STARTUP_FILE}.p3-f4"
+grep -viE 'of_demo_app|sch_lab' "$STARTUP_FILE" > "$F4_STARTUP"
+mv "$F4_STARTUP" "$STARTUP_FILE"
+
+(
+  cd "$CPU_DIR"
+  stdbuf -oL -eL ./core-cpu1
+) > "$NONDERIVED_RUNTIME_LOG" 2>&1 &
+CFS_PID=$!
+
+wait_for_pattern "$NONDERIVED_RUNTIME_LOG" 'Sample App Initialized' \
+  'P3 F4 NASA sample_app initialization observed'
+wait_for_pattern "$NONDERIVED_RUNTIME_LOG" 'CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state' \
+  'P3 F4 cFS operational state observed'
+
+if grep -F 'P3 F4: SAMPLE_APP SendHk non-derived handler invoked' "$NONDERIVED_RUNTIME_LOG" >/dev/null 2>&1; then
+  echo "P3 F4 non-derived handler was invoked before the explicit probe" >&2
+  exit 1
+fi
+
+NONDERIVED_BEFORE="$(wc -l < "$NONDERIVED_RUNTIME_LOG")"
+(
+  cd "$HOST_DIR"
+  ./cmd_send -v -I SAMPLE_APP/SEND_HK
+) > "$NONDERIVED_CMD_LOG" 2>&1
+
+if ! grep -F 'Using result from EDS encoder' "$NONDERIVED_CMD_LOG" >/dev/null 2>&1; then
+  echo "P3 F4 SAMPLE_APP/SEND_HK did not use EDS encoder" >&2
+  cat "$NONDERIVED_CMD_LOG" >&2
+  exit 1
+fi
+
+NONDERIVED_OBSERVED="false"
+NONDERIVED_RUNTIME=""
+for attempt in $(seq 1 20); do
+  NONDERIVED_RUNTIME="$(tail -n +$((NONDERIVED_BEFORE + 1)) "$NONDERIVED_RUNTIME_LOG")"
+  if grep -F 'P3 F4: SAMPLE_APP SendHk non-derived handler invoked' \
+    <<<"$NONDERIVED_RUNTIME" >/dev/null 2>&1; then
+    NONDERIVED_OBSERVED="true"
+    break
+  fi
+  if grep -F 'SAMPLE: Invalid ground command code' <<<"$NONDERIVED_RUNTIME" >/dev/null 2>&1; then
+    break
+  fi
+  if ! kill -0 "$CFS_PID" 2>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
+{
+  printf '%s\n' 'nonderived_control_interface=SAMPLE_APP/SEND_HK'
+  printf '%s\n' 'nonderived_control_model=GENUINELY_NON_DERIVED_TELECOMMAND'
+  printf '%s\n' 'nonderived_control_encoder=EDS'
+  printf 'nonderived_handler_observed=%s\n' "$NONDERIVED_OBSERVED"
+  printf '%s\n' '# non-derived relevant runtime evidence'
+  grep -E 'P3 F4: SAMPLE_APP SendHk non-derived handler invoked|SAMPLE: Invalid ground command code' \
+    <<<"$NONDERIVED_RUNTIME" || true
+} >> "$CONTROL_RESULT"
+
+if [[ "$NONDERIVED_OBSERVED" != "true" ]]; then
+  echo "P3 F4 candidate distinction broke genuine non-derived EDS dispatch" >&2
+  cat "$CONTROL_RESULT" >&2
+  tail -n 120 "$NONDERIVED_RUNTIME_LOG" >&2 || true
+  exit 1
+fi
+
+stop_runtime
+printf '%s\n' 'P3 EdsLib derived-dispatch control PASS including F4 non-derived regression'
