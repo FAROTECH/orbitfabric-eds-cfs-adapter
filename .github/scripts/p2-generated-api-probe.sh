@@ -95,13 +95,8 @@ EOF
   CFS_APP_PATH="$APP_ROOT" make native_eds.install
 ) 2>&1 | tee "$EVIDENCE_DIR/install.log"
 
-find "$BUILD_DIR" -type f \( \
-    -name 'of_demo_eds_dispatcher.h' -o \
-    -name 'of_demo_eds_dictionary.h' -o \
-    -name 'of_demo_eds_typedefs.h' -o \
-    -name 'of_demo_eds_interface_parameters.h' -o \
-    -name 'of_demo_eds_parameters.h' \
-  \) -print | sort > "$EVIDENCE_DIR/generated-api-files.txt"
+find "$BUILD_DIR" -type f -name 'of_demo_eds_*.h' -print | sort \
+  > "$EVIDENCE_DIR/generated-api-files.txt"
 
 if [[ ! -s "$EVIDENCE_DIR/generated-api-files.txt" ]]; then
   echo "no OF_DEMO generated API headers discovered" >&2
@@ -124,7 +119,7 @@ if ! grep -q '/tlm_recv$' "$EVIDENCE_DIR/host-tools.txt"; then
   exit 1
 fi
 
-grep -hE 'EdsDispatch(Table)?_EdsComponent_OF_DEMO|PayloadEnableCmd|PayloadSetPeriodCmd' \
+grep -hE 'EdsDispatch_EdsComponent_OF_DEMO|DispatchTable_EdsComponent_OF_DEMO|PayloadEnableCmd|PayloadSetPeriodCmd' \
   "$GENERATED_DIR"/*.h > "$EVIDENCE_DIR/of-demo-dispatch-symbols.raw" || true
 if [[ ! -s "$EVIDENCE_DIR/of-demo-dispatch-symbols.raw" ]]; then
   echo "OF_DEMO dispatcher symbols were not discoverable from generated headers" >&2
