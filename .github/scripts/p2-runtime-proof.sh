@@ -29,6 +29,7 @@ CFS_LOG="${EVIDENCE_DIR}/cfs-runtime.log"
 TLM_LOG="${EVIDENCE_DIR}/tlm-recv.log"
 TO_ENABLE_LOG="${EVIDENCE_DIR}/to-enable-command.log"
 OF_ENABLE_LOG="${EVIDENCE_DIR}/of-enable-command.log"
+P2B_TABLE="${EVIDENCE_DIR}/p2-b-valid-range-observation.tsv"
 STARTUP_CONTROL_LOG="${EVIDENCE_DIR}/startup-control-cfs.log"
 
 CFS_PID=""
@@ -104,6 +105,78 @@ wait_for_pattern() {
 
   echo "timeout waiting for: $label" >&2
   return 1
+}
+
+observe_set_period() {
+  local value="$1"
+  local label="$2"
+  local cmd_log="${EVIDENCE_DIR}/p2-b-set-period-${label}.log"
+  local cfs_before
+  local cmd_rc
+  local host_encode="rejected"
+  local sent="no"
+  local dispatch="not_observed"
+  local handler="no"
+  local received="-"
+  local new_runtime
+  local attempt
+
+  cfs_before="$(wc -l < "$CFS_LOG")"
+
+  set +e
+  (
+    cd "$HOST_DIR"
+    ./cmd_send -v -I OF_DEMO/CMD.PayloadSetPeriodCmd "PeriodMs=${value}"
+  ) > "$cmd_log" 2>&1
+  cmd_rc=$?
+  set -e
+
+  printf '%s\n' "$cmd_rc" > "${EVIDENCE_DIR}/p2-b-set-period-${label}.exit-code.txt"
+
+  if [[ "$cmd_rc" -eq 0 ]] \
+    && ! grep -F 'Option parsing failed' "$cmd_log" >/dev/null 2>&1 \
+    && grep -F 'Using result from EDS encoder' "$cmd_log" >/dev/null 2>&1; then
+    host_encode="accepted"
+    sent="yes"
+
+    for attempt in $(seq 1 10); do
+      new_runtime="$(tail -n +$((cfs_before + 1)) "$CFS_LOG")"
+      if grep -F "OF_DEMO_APP: payload.set_period dispatched through generated EDS interface PeriodMs=${value}" \
+        <<<"$new_runtime" >/dev/null 2>&1; then
+        dispatch="accepted"
+        handler="yes"
+        received="$value"
+        break
+      fi
+      if grep -F 'OF_DEMO_APP: generated EDS dispatch rejected command' \
+        <<<"$new_runtime" >/dev/null 2>&1; then
+        dispatch="rejected"
+        break
+      fi
+      if [[ -n "$CFS_PID" ]] && ! kill -0 "$CFS_PID" 2>/dev/null; then
+        dispatch="runtime_exited"
+        break
+      fi
+      sleep 1
+    done
+  fi
+
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$value" "$cmd_rc" "$host_encode" "$sent" "$dispatch" "$handler" "$received" >> "$P2B_TABLE"
+
+  if [[ "$value" == "1000" ]]; then
+    if [[ "$host_encode" != "accepted" || "$dispatch" != "accepted" || "$handler" != "yes" || "$received" != "1000" ]]; then
+      echo "P2-B valid value 1000 did not reach generated typed handler" >&2
+      cat "$cmd_log" >&2 || true
+      return 1
+    fi
+  else
+    if [[ "$host_encode" == "accepted" && "$dispatch" == "not_observed" ]]; then
+      echo "P2-B probe ${value} was sent but no dispatch/handler boundary was observed" >&2
+      cat "$cmd_log" >&2 || true
+      return 1
+    fi
+  fi
 }
 
 rm -rf "$CFS_DIR" "$APP_ROOT" "$EVIDENCE_DIR"
@@ -273,6 +346,23 @@ wait_for_pattern "$TLM_LOG" 'PayloadEnabled[[:space:]]*=[[:space:]]*(true|1)' \
   grep -E 'PayloadEnabled[[:space:]]*=[[:space:]]*(true|1)' "$TLM_LOG" | tail -n 1
 } > "$EVIDENCE_DIR/p2-a-acceptance.txt"
 
+# P2-B observational typed-argument proof.  Do not add application-side
+# range policy here: Decision 018 requires observing the first rejecting
+# boundary for the out-of-range probes.
+printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+  'value' 'host_exit' 'host_encode' 'sent' 'generated_dispatch' 'typed_handler' 'received_value' > "$P2B_TABLE"
+
+observe_set_period 1000 valid-1000
+observe_set_period 99 below-min-99
+observe_set_period 60001 above-max-60001
+
+{
+  printf '%s\n' '# P2-B observational ValidRange result'
+  cat "$P2B_TABLE"
+  printf '%s\n' '# retained EDS ValidRange'
+  grep -A3 -B1 'Entry name="PeriodMs"' "$B6_SOURCE"
+} > "$EVIDENCE_DIR/p2-b-acceptance.txt"
+
 # P2-A7 startup dependency control: use the exact same built/staged image,
 # but restore the generated startup script from before OF_DEMO was appended.
 kill "$CFS_PID" 2>/dev/null || true
@@ -323,4 +413,4 @@ CFS_PID=""
 
 require_sha256 "$B6_SOURCE" "$B6_SHA256" "retained B6 after runtime"
 
-printf '%s\n' "P2-A EDS-backed runtime command/telemetry proof and startup dependency control completed"
+printf '%s\n' "P2-A regression and P2-B typed ValidRange observation completed"
