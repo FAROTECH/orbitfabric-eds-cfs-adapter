@@ -9,12 +9,12 @@ CPU_CF_DIR="${CPU_DIR}/cf"
 HOST_DIR="${BUILD_DIR}/exe/host"
 STARTUP_FILE="${CPU_CF_DIR}/cfe_es_startup.scr"
 P3_EVIDENCE_DIR="${RUN_ROOT}/orbitfabric-eds-cfs-p3-conformance-evidence"
-RUNTIME_LOG="${P3_EVIDENCE_DIR}/nasa-sample-app-runtime.log"
+VALID_RUNTIME_LOG="${P3_EVIDENCE_DIR}/nasa-sample-app-valid-runtime.log"
+UNKNOWN_RUNTIME_LOG="${P3_EVIDENCE_DIR}/nasa-sample-app-runtime.log"
 VALID_LOG="${P3_EVIDENCE_DIR}/nasa-sample-app-valid-noop.log"
 UNKNOWN_LOG="${P3_EVIDENCE_DIR}/nasa-sample-app-unknown-fc.log"
 RESULT_FILE="${P3_EVIDENCE_DIR}/nasa-sample-app-control.txt"
 UNKNOWN_FUNCTION_CODE="127"
-UNUSED_UDP_PORT="65534"
 
 CFS_PID=""
 
@@ -49,6 +49,29 @@ wait_for_pattern() {
   return 1
 }
 
+start_runtime() {
+  local runtime_log="$1"
+  rm -f "$runtime_log"
+  (
+    cd "$CPU_DIR"
+    stdbuf -oL -eL ./core-cpu1
+  ) > "$runtime_log" 2>&1 &
+  CFS_PID=$!
+
+  wait_for_pattern "$runtime_log" 'Sample App Initialized' 'NASA sample_app initialization observed'
+  wait_for_pattern "$runtime_log" 'CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state' 'NASA SampleMission operational state observed'
+}
+
+stop_runtime() {
+  set +e
+  if [[ -n "$CFS_PID" ]]; then
+    kill "$CFS_PID" 2>/dev/null || true
+    wait "$CFS_PID" 2>/dev/null || true
+    CFS_PID=""
+  fi
+  set -e
+}
+
 mkdir -p "$P3_EVIDENCE_DIR"
 
 if [[ ! -x "$CPU_DIR/core-cpu1" || ! -x "$HOST_DIR/cmd_send" || ! -f "$STARTUP_FILE" ]]; then
@@ -66,26 +89,21 @@ tmp_startup="${STARTUP_FILE}.p3-sample-app"
 grep -v 'of_demo_app' "$STARTUP_FILE" > "$tmp_startup"
 mv "$tmp_startup" "$STARTUP_FILE"
 
-(
-  cd "$CPU_DIR"
-  stdbuf -oL -eL ./core-cpu1
-) > "$RUNTIME_LOG" 2>&1 &
-CFS_PID=$!
+# -----------------------------------------------------------------------------
+# Control A: prove the stock NASA sample_app is reachable through the exact
+# staged UDP/CI_LAB/Software-Bus lane by sending a normal EDS NoopCmd to the
+# real CI_LAB port and observing the stock application handler event.
+# -----------------------------------------------------------------------------
+start_runtime "$VALID_RUNTIME_LOG"
+VALID_BEFORE="$(wc -l < "$VALID_RUNTIME_LOG")"
 
-wait_for_pattern "$RUNTIME_LOG" 'Sample App Initialized' 'NASA sample_app initialization observed'
-wait_for_pattern "$RUNTIME_LOG" 'CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state' 'NASA SampleMission operational state observed'
-
-# Encode the stock NoopCmd through the nominal EDS encoder only to derive the
-# exact packet/APID. Send it to an unused UDP port so it does not enter the
-# runtime and cannot consume/filter the NOOP event that the unknown probe may
-# accidentally trigger.
 (
   cd "$HOST_DIR"
-  ./cmd_send -v -P "$UNUSED_UDP_PORT" -I SAMPLE_APP/CMD.NoopCmd
+  ./cmd_send -v -I SAMPLE_APP/CMD.NoopCmd
 ) > "$VALID_LOG" 2>&1
 
 if ! grep -F 'Using result from EDS encoder' "$VALID_LOG" >/dev/null 2>&1; then
-  echo "NASA sample_app APID derivation did not use EDS encoder" >&2
+  echo "NASA sample_app positive ingress control did not use EDS encoder" >&2
   cat "$VALID_LOG" >&2
   exit 1
 fi
@@ -103,7 +121,38 @@ print(hex(packet_id & 0x07ff))
 PY
 )"
 
-UNKNOWN_BEFORE="$(wc -l < "$RUNTIME_LOG")"
+VALID_REACHED="false"
+for attempt in $(seq 1 20); do
+  VALID_NEW_RUNTIME="$(tail -n +$((VALID_BEFORE + 1)) "$VALID_RUNTIME_LOG")"
+  if grep -F 'SAMPLE: NOOP command' <<<"$VALID_NEW_RUNTIME" >/dev/null 2>&1; then
+    VALID_REACHED="true"
+    break
+  fi
+  if ! kill -0 "$CFS_PID" 2>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+
+if [[ "$VALID_REACHED" != "true" ]]; then
+  echo "NASA sample_app positive ingress control did not reach the stock NOOP handler" >&2
+  tail -n 120 "$VALID_RUNTIME_LOG" >&2 || true
+  exit 1
+fi
+
+# Restart before the invalid probe so the second result cannot be affected by
+# the positive control's application/EVS state or event filtering.
+stop_runtime
+sleep 1
+
+# -----------------------------------------------------------------------------
+# Control B: on a fresh runtime of the same staged bytes, inject only FC 127.
+# The positive control above proves the lane and APID. This runtime therefore
+# discriminates target behavior for an unknown command without OF_DEMO loaded.
+# -----------------------------------------------------------------------------
+start_runtime "$UNKNOWN_RUNTIME_LOG"
+UNKNOWN_BEFORE="$(wc -l < "$UNKNOWN_RUNTIME_LOG")"
+
 (
   cd "$HOST_DIR"
   ./cmd_send -v -Q cfsv1 -A "$SAMPLE_APID" -C "$UNKNOWN_FUNCTION_CODE"
@@ -122,7 +171,7 @@ fi
 CLASSIFICATION="NO_OBSERVABLE_RESULT"
 NEW_RUNTIME=""
 for attempt in $(seq 1 20); do
-  NEW_RUNTIME="$(tail -n +$((UNKNOWN_BEFORE + 1)) "$RUNTIME_LOG")"
+  NEW_RUNTIME="$(tail -n +$((UNKNOWN_BEFORE + 1)) "$UNKNOWN_RUNTIME_LOG")"
 
   if grep -F 'SAMPLE: NOOP command' <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
     CLASSIFICATION="UNKNOWN_FC_DISPATCHED_AS_NOOP"
@@ -131,6 +180,12 @@ for attempt in $(seq 1 20); do
 
   if grep -F 'SAMPLE: Invalid ground command code: CC = 127' <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
     CLASSIFICATION="UNKNOWN_FC_REJECTED_BY_SAMPLE_APP_DISPATCH"
+    break
+  fi
+
+  if grep -E 'EdsLib_DataTypeDB_UnpackPartialObject\(Payload\):|EdsLib_DataTypeDB_VerifyUnpackedObject\(\):|CI_LAB: Ingest failed' \
+    <<<"$NEW_RUNTIME" >/dev/null 2>&1; then
+    CLASSIFICATION="UNKNOWN_FC_REJECTED_AT_CI_LAB_EDS_INGRESS"
     break
   fi
 
@@ -145,17 +200,20 @@ done
 {
   printf '%s\n' '# NASA sample_app P3 control'
   printf '%s\n' 'orbitfabric_app_started=false'
-  printf '%s\n' 'apid_derivation=SAMPLE_APP/CMD.NoopCmd encoded by EDS to unused UDP port'
+  printf '%s\n' 'positive_control_encoder=EDS'
+  printf '%s\n' 'positive_control_target_lane=UDP_1234/CI_LAB/SB/SAMPLE_APP'
+  printf '%s\n' 'positive_control_result=SAMPLE_APP_NOOP_HANDLER_OBSERVED'
+  printf '%s\n' 'positive_control_pass=true'
+  printf '%s\n' 'unknown_probe_fresh_runtime=true'
   printf 'derived_sample_app_apid=%s\n' "$SAMPLE_APID"
   printf 'unknown_function_code=%s\n' "$UNKNOWN_FUNCTION_CODE"
   printf '%s\n' 'unknown_probe_encoder=PassThrough'
   printf 'classification=%s\n' "$CLASSIFICATION"
   printf '%s\n' '# relevant runtime evidence after unknown probe'
-  grep -E 'SAMPLE: NOOP command|SAMPLE: Invalid ground command code' <<<"$NEW_RUNTIME" || true
+  grep -E 'SAMPLE: NOOP command|SAMPLE: Invalid ground command code|EdsLib_DataTypeDB_UnpackPartialObject\(Payload\):|EdsLib_DataTypeDB_VerifyUnpackedObject\(\):|CI_LAB: Ingest failed' \
+    <<<"$NEW_RUNTIME" || true
 } > "$RESULT_FILE"
 
 printf 'NASA sample_app P3 control classification: %s\n' "$CLASSIFICATION"
 
-kill "$CFS_PID" 2>/dev/null || true
-wait "$CFS_PID" 2>/dev/null || true
-CFS_PID=""
+stop_runtime
