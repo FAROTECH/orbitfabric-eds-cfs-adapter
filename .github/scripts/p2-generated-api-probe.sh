@@ -124,22 +124,23 @@ if ! grep -q '/tlm_recv$' "$EVIDENCE_DIR/host-tools.txt"; then
   exit 1
 fi
 
+grep -hE 'EdsDispatch(Table)?_EdsComponent_OF_DEMO|PayloadEnableCmd|PayloadSetPeriodCmd' \
+  "$GENERATED_DIR"/*.h > "$EVIDENCE_DIR/of-demo-dispatch-symbols.raw" || true
+if [[ ! -s "$EVIDENCE_DIR/of-demo-dispatch-symbols.raw" ]]; then
+  echo "OF_DEMO dispatcher symbols were not discoverable from generated headers" >&2
+  exit 1
+fi
 {
   printf '%s\n' '# OF_DEMO generated dispatcher symbols'
-  grep -hE 'EdsDispatch(Table)?_EdsComponent_OF_DEMO|PayloadEnableCmd|PayloadSetPeriodCmd' \
-    "$GENERATED_DIR"/*.h || true
+  cat "$EVIDENCE_DIR/of-demo-dispatch-symbols.raw"
 } > "$EVIDENCE_DIR/of-demo-dispatch-symbols.txt"
+rm "$EVIDENCE_DIR/of-demo-dispatch-symbols.raw"
 
 {
   printf '%s\n' '# OF_DEMO generated typedef symbols'
   grep -hE 'PayloadEnableCmd|PayloadSetPeriod|PayloadStatusTlm|OF_DEMO' \
     "$GENERATED_DIR"/*.h || true
 } > "$EVIDENCE_DIR/of-demo-type-symbols.txt"
-
-if [[ ! -s "$EVIDENCE_DIR/of-demo-dispatch-symbols.txt" ]]; then
-  echo "OF_DEMO dispatcher symbols were not discoverable from generated headers" >&2
-  exit 1
-fi
 
 require_sha256 "$B6_SOURCE" "$B6_SHA256" "retained B6 after probe"
 
