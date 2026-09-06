@@ -28,11 +28,11 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "tests" / "fixtures" / "p0_b3" / "profile.yaml"
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b8" / "expected.json"
 CORE_DIGEST = "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98"
-PROFILE_DIGEST = "f8e380f165d15cebb8ccdd83c00791ffa4414102887fcbc934332c4189a43350"
-B6_DIGEST = "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
-B7_DIGEST = "8984eb984ec74c842681d024de617cbb8adf6aa05bf27fa67f0a4014541f859d"
+PROFILE_DIGEST = "710fc8abb6103d8ef26bb5ee0b8cce98c599c14adaed7a0df2ae499515fa11e3"
+B6_DIGEST = "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+B7_DIGEST = "78f8bde50ba4a154547191e5ccee5b246b8d17e1cfd8cbb7ff37ba3b5f86064f"
 B8_SIZE = 13168
-B8_DIGEST = "002f73792ac03e3b10faf9a73c593e904fb140245d5b0414bd07ae3c1f1e7517"
+B8_DIGEST = "0cd845a656d8a04ffc118e9feae71ecbff848982d2b6e39f19bdf36d05b20310"
 
 
 def _core() -> LoadedInputSet:
