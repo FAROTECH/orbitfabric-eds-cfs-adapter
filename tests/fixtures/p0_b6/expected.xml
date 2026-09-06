@@ -57,7 +57,7 @@
         <Implementation>
           <VariableSet>
             <Variable type="BASE_TYPES/uint16" readOnly="true" name="CMDTopicId" initialValue="160" />
-            <Variable type="BASE_TYPES/uint16" readOnly="true" name="STATUSTLMTopicId" initialValue="161" />
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="STATUSTLMTopicId" initialValue="416" />
           </VariableSet>
           <ParameterMapSet>
             <ParameterMap interface="CMD" parameter="TopicId" variableRef="CMDTopicId" />

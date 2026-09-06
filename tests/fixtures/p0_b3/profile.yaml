@@ -20,7 +20,7 @@ settings:
       topic_id: 160
     telemetry:
       name: STATUS_TLM
-      topic_id: 161
+      topic_id: 416
 
 bindings:
   - id: cmd.payload-enable

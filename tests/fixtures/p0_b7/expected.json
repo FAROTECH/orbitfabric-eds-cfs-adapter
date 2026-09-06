@@ -5,7 +5,7 @@
     "kind": "ccsds.sois.eds.xml",
     "media_type": "application/xml",
     "package": "OF_DEMO",
-    "sha256": "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
+    "sha256": "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
   },
   "integration": {
     "id": "orbitfabric-eds-cfs",
@@ -323,7 +323,7 @@
           "id": "payload_status"
         }
       ],
-      "value": 161
+      "value": 416
     },
     {
       "binding": "packet.payload-status",

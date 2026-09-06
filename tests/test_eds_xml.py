@@ -25,7 +25,7 @@ from orbitfabric_eds_cfs_adapter.projection.model import (
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b6" / "expected.xml"
-EXPECTED_SHA256 = "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
+EXPECTED_SHA256 = "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
 
 
 def _model() -> EdsProjectionModel:
@@ -109,7 +109,7 @@ def _model() -> EdsProjectionModel:
                 interface_type="CFE_SB/Telemetry",
                 generic_type_name="TelemetryDataType",
                 generic_type_ref="PayloadStatusTlm",
-                topic_id=161,
+                topic_id=416,
                 topic_variable="STATUSTLMTopicId",
             ),
         ),
@@ -124,7 +124,7 @@ def _model() -> EdsProjectionModel:
                 name="STATUSTLMTopicId",
                 type_ref="BASE_TYPES/uint16",
                 read_only=True,
-                initial_value=161,
+                initial_value=416,
             ),
         ),
         parameter_maps=(
@@ -230,7 +230,7 @@ def test_b5_concepts_are_preserved_in_xml() -> None:
     variables = root.findall(".//eds:Variable", ns)
     assert [(item.attrib["name"], item.attrib["initialValue"]) for item in variables] == [
         ("CMDTopicId", "160"),
-        ("STATUSTLMTopicId", "161"),
+        ("STATUSTLMTopicId", "416"),
     ]
 
 

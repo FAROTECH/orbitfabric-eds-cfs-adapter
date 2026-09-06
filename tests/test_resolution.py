@@ -100,7 +100,7 @@ def test_canonical_profile_resolves_against_core() -> None:
     assert resolved.profile_id == "eds-cfs-p0"
     assert resolved.package_name == "OF_DEMO"
     assert resolved.command_interface.topic_id == 160
-    assert resolved.telemetry_interface.topic_id == 161
+    assert resolved.telemetry_interface.topic_id == 416
     assert [(item.source_id, item.function_code) for item in resolved.commands] == [
         ("payload.enable", 0),
         ("payload.set_period", 1),

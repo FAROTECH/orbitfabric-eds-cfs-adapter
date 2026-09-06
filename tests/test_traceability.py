@@ -31,8 +31,8 @@ from orbitfabric_eds_cfs_adapter.projection.traceability import (
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b7" / "expected.json"
-EXPECTED_SHA256 = "8984eb984ec74c842681d024de617cbb8adf6aa05bf27fa67f0a4014541f859d"
-EXPECTED_B6_SHA256 = "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
+EXPECTED_SHA256 = "78f8bde50ba4a154547191e5ccee5b246b8d17e1cfd8cbb7ff37ba3b5f86064f"
+EXPECTED_B6_SHA256 = "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
 
 
 def _resolved() -> ResolvedProfile:
@@ -42,7 +42,7 @@ def _resolved() -> ResolvedProfile:
         package_name="OF_DEMO",
         component_name="Application",
         command_interface=ResolvedInterface(name="CMD", topic_id=160),
-        telemetry_interface=ResolvedInterface(name="STATUS_TLM", topic_id=161),
+        telemetry_interface=ResolvedInterface(name="STATUS_TLM", topic_id=416),
         commands=(
             ResolvedCommandBinding(
                 binding_id="cmd.payload-enable",
@@ -228,7 +228,7 @@ def test_packet_and_telemetry_traceability_are_explicit() -> None:
     assert _resolution(
         payload,
         "resolution.packets.payload_status.telemetry_topic_id",
-    )["value"] == 161
+    )["value"] == 416
 
     enabled = _mapping(payload, "mapping.telemetry.payload.enabled")
     assert enabled["profile_bindings"] == ["packet.payload-status"]
