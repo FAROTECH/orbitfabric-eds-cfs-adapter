@@ -37,6 +37,10 @@ jobs:
         if: ${{ always() }}
         run: bash .github/scripts/p3-nasa-sample-app-control.sh
 
+      - name: Run EdsLib derived-dispatch control experiment
+        if: ${{ always() }}
+        run: bash .github/scripts/p3-edslib-derived-dispatch-control.sh
+
       - name: Upload P3 conformance evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
