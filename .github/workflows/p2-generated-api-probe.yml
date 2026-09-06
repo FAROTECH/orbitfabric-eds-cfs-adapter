@@ -1,0 +1,38 @@
+name: P2 Generated API Probe
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  p2-generated-api-probe:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned-lane host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            pkg-config \
+            libexpat1-dev \
+            liblua5.3-dev \
+            libjson-c-dev \
+            python3-dev
+
+      - name: Probe generated OF_DEMO runtime API
+        run: bash .github/scripts/p2-generated-api-probe.sh
+
+      - name: Upload P2 generated API evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p2-generated-api-probe
+          path: ${{ runner.temp }}/orbitfabric-eds-cfs-p2-probe-evidence
+          if-no-files-found: error
