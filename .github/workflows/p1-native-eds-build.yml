@@ -30,6 +30,7 @@ jobs:
         run: bash .github/scripts/p1-native-eds-build.sh
 
       - name: Upload P1 build evidence
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: eds-cfs-p1-native-build
