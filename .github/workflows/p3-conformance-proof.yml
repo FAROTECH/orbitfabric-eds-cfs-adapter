@@ -1,0 +1,38 @@
+name: P3 Conformance Proof
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  p3-conformance-proof:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned-lane host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            pkg-config \
+            libexpat1-dev \
+            liblua5.3-dev \
+            libjson-c-dev \
+            python3-dev
+
+      - name: Execute P3 EDS-cFS conformance proof
+        run: bash .github/scripts/p3-conformance-proof.sh
+
+      - name: Upload P3 conformance evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: eds-cfs-p3-conformance-proof
+          path: ${{ runner.temp }}/orbitfabric-eds-cfs-p3-conformance-evidence
+          if-no-files-found: error
