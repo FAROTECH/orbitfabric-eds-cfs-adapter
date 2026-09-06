@@ -234,6 +234,9 @@ if grep -F 'Option parsing failed' "$TO_ENABLE_LOG" >/dev/null 2>&1 \
   exit 1
 fi
 
+wait_for_pattern "$CFS_LOG" 'TO telemetry output enabled for IP 127\.0\.0\.1' \
+  'TO_LAB telemetry output enablement observed'
+
 (
   cd "$HOST_DIR"
   ./cmd_send -v -I OF_DEMO/CMD.PayloadEnableCmd
@@ -255,6 +258,7 @@ wait_for_pattern "$TLM_LOG" 'PayloadEnabled[[:space:]]*=[[:space:]]*(true|1)' \
 {
   printf '%s\n' '# P2-A runtime acceptance'
   grep -F 'OF_DEMO_APP: initialized with EDS CMD topic 160 and STATUS_TLM topic 416' "$CFS_LOG"
+  grep -F 'TO telemetry output enabled for IP 127.0.0.1' "$CFS_LOG"
   grep -F 'OF_DEMO_APP: payload.enable dispatched through generated EDS interface' "$CFS_LOG"
   grep -F 'Using result from EDS encoder' "$OF_ENABLE_LOG"
   grep -F 'OF_DEMO/PayloadStatusTlm' "$TLM_LOG" | tail -n 1
