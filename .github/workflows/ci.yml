@@ -190,7 +190,7 @@ jobs:
           )
           assert (resolved.telemetry_interface.name, resolved.telemetry_interface.topic_id) == (
               "STATUS_TLM",
-              161,
+              416,
           )
           assert [(item.source_id, item.function_code) for item in resolved.commands] == [
               ("payload.enable", 0),
@@ -260,11 +260,11 @@ jobs:
           ]
           assert [(item.name, item.topic_id) for item in model.interfaces] == [
               ("CMD", 160),
-              ("STATUS_TLM", 161),
+              ("STATUS_TLM", 416),
           ]
           assert [(item.name, item.initial_value) for item in model.variables] == [
               ("CMDTopicId", 160),
-              ("STATUSTLMTopicId", 161),
+              ("STATUSTLMTopicId", 416),
           ]
 
           print("B5 real internal projection model: PASS")
@@ -293,7 +293,7 @@ jobs:
           assert actual == expected
           assert len(actual) == 2921
           assert hashlib.sha256(actual).hexdigest() == (
-              "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
+              "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
           )
           parsed = ET.fromstring(actual)
           assert parsed.tag == "{http://www.ccsds.org/schema/sois/seds}PackageFile"
@@ -334,10 +334,10 @@ jobs:
           assert actual == expected
           assert len(actual) == 9186
           assert hashlib.sha256(actual).hexdigest() == (
-              "8984eb984ec74c842681d024de617cbb8adf6aa05bf27fa67f0a4014541f859d"
+              "78f8bde50ba4a154547191e5ccee5b246b8d17e1cfd8cbb7ff37ba3b5f86064f"
           )
           assert traceability["artifact"]["sha256"] == (
-              "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
+              "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
           )
           mapped_sources = {
               (source["domain"], source["id"])
