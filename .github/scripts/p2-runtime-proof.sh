@@ -7,7 +7,7 @@ CFE_COMMIT="c5fb2b4d540bd55eb6c3707da7dd13eee679d4dd"
 CI_LAB_COMMIT="f5d36625336249312ee9d5815bc875e231815bb4"
 TO_LAB_COMMIT="38f7312ec4c1109b8f1c0738730b6e5ac5860f05"
 COMMANDLINE_TOOLS_COMMIT="d70c56ec035694c9a64b317897403266166f5d68"
-B6_SHA256="3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e"
+B6_SHA256="e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
 
 ADAPTER_ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
 RUN_ROOT="${RUNNER_TEMP:-/tmp}"
@@ -157,7 +157,7 @@ if include_line not in text:
         raise SystemExit('TO_LAB subscription include anchor not found')
     text = text.replace(include_anchor, include_anchor + include_line, 1)
 
-subscription = '        {CFE_SB_MSGID_WRAP_VALUE(CFE_PLATFORM_TLM_TOPICID_TO_MIDV(161)), {0, 0}, 1},\n'
+subscription = '        {CFE_SB_MSGID_WRAP_VALUE(CFE_PLATFORM_TLM_TOPICID_TO_MIDV(416)), {0, 0}, 1},\n'
 anchor = '        /* TO_UNUSED entry to mark the end of valid MsgIds */\n'
 if subscription not in text:
     if anchor not in text:
@@ -167,7 +167,7 @@ if subscription not in text:
 path.write_text(text)
 PY
 
-grep -F 'CFE_PLATFORM_TLM_TOPICID_TO_MIDV(161)' "$TO_SUB_SOURCE" \
+grep -F 'CFE_PLATFORM_TLM_TOPICID_TO_MIDV(416)' "$TO_SUB_SOURCE" \
   > "$EVIDENCE_DIR/to-lab-of-demo-subscription.txt"
 
 (
@@ -220,7 +220,7 @@ TLM_PID=$!
 ) > "$CFS_LOG" 2>&1 &
 CFS_PID=$!
 
-wait_for_pattern "$CFS_LOG" 'OF_DEMO_APP: initialized with EDS CMD topic 160 and STATUS_TLM topic 161' \
+wait_for_pattern "$CFS_LOG" 'OF_DEMO_APP: initialized with EDS CMD topic 160 and STATUS_TLM topic 416' \
   'OF_DEMO_APP runtime initialization observed'
 
 (
@@ -254,7 +254,7 @@ wait_for_pattern "$TLM_LOG" 'PayloadEnabled[[:space:]]*=[[:space:]]*(true|1)' \
 
 {
   printf '%s\n' '# P2-A runtime acceptance'
-  grep -F 'OF_DEMO_APP: initialized with EDS CMD topic 160 and STATUS_TLM topic 161' "$CFS_LOG"
+  grep -F 'OF_DEMO_APP: initialized with EDS CMD topic 160 and STATUS_TLM topic 416' "$CFS_LOG"
   grep -F 'OF_DEMO_APP: payload.enable dispatched through generated EDS interface' "$CFS_LOG"
   grep -F 'Using result from EDS encoder' "$OF_ENABLE_LOG"
   grep -F 'OF_DEMO/PayloadStatusTlm' "$TLM_LOG" | tail -n 1
