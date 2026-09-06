@@ -113,21 +113,29 @@ printf '%s\n' "Compiling complete native_eds mission"
 run_positive_goal native_eds.compile positive-compile.log
 require_file "$BUILD_DIR/stamp.compile" "native_eds compile stamp"
 
-if [[ ! -f "$COMPILE_DB" ]]; then
-  echo "compile database not found at expected path: $COMPILE_DB" >&2
-  echo "compile database candidates:" >&2
-  find "$BUILD_DIR" -type f -name 'compile_commands.json' -print | sort >&2
-  exit 1
-fi
+# cFS native_* is a composed build.  The top-level compile database does not
+# necessarily aggregate compile commands emitted by every nested application
+# build, so it is retained as optional diagnostic evidence rather than used as
+# the participation gate.  Native build output plus the produced module are
+# the authoritative P1 evidence for the external app.
+find "$BUILD_DIR" -type f -name 'compile_commands.json' -print | sort \
+  > "$EVIDENCE_DIR/compile-db-candidates.txt"
+: > "$EVIDENCE_DIR/of-demo-compile-command.txt"
+while IFS= read -r compile_db; do
+  grep -F "of_demo_app.c" "$compile_db" >> "$EVIDENCE_DIR/of-demo-compile-command.txt" || true
+done < "$EVIDENCE_DIR/compile-db-candidates.txt"
 
-if ! grep -F "of_demo_app.c" "$COMPILE_DB" > "$EVIDENCE_DIR/of-demo-compile-command.txt"; then
-  echo "of_demo_app.c not found in compile database: $COMPILE_DB" >&2
-  echo "of_demo build-tree candidates:" >&2
-  find "$BUILD_DIR" -type f \
-    \( -name 'compile_commands.json' -o -iname '*of_demo*' -o -name 'stamp.compile' \) \
-    -print | sort >&2
+if ! grep -F 'Building C object apps/of_demo_app/' "$EVIDENCE_DIR/positive-compile.log" >/dev/null \
+  || ! grep -F 'Linking C shared module of_demo_app.so' "$EVIDENCE_DIR/positive-compile.log" >/dev/null \
+  || ! grep -F 'Built target of_demo_app' "$EVIDENCE_DIR/positive-compile.log" >/dev/null; then
+  echo "native build log does not prove complete of_demo_app participation" >&2
   exit 1
 fi
+{
+  grep -F 'Building C object apps/of_demo_app/' "$EVIDENCE_DIR/positive-compile.log"
+  grep -F 'Linking C shared module of_demo_app.so' "$EVIDENCE_DIR/positive-compile.log"
+  grep -F 'Built target of_demo_app' "$EVIDENCE_DIR/positive-compile.log"
+} > "$EVIDENCE_DIR/of-demo-native-build-evidence.txt"
 
 find "$BUILD_DIR" -type f \
   \( -name 'of_demo_app.so' -o -name 'of_demo_app' -o -name 'libof_demo_app.so' \) \
