@@ -22,14 +22,38 @@ typedef struct
 
 static OF_DEMO_APP_Data_t OF_DEMO_APP_Data;
 
+static void OF_DEMO_APP_LogStatusTlmMsgId(const char *Stage)
+{
+    CFE_SB_MsgId_t msg_id;
+    CFE_Status_t   status;
+
+    status = CFE_MSG_GetMsgId(CFE_MSG_PTR(OF_DEMO_APP_Data.StatusTlm.TelemetryHeader), &msg_id);
+    if (status == CFE_SUCCESS)
+    {
+        CFE_ES_WriteToSysLog("OF_DEMO_APP: %s status telemetry MID=0x%08lx\n",
+                             Stage,
+                             (unsigned long)CFE_SB_MsgIdToValue(msg_id));
+    }
+    else
+    {
+        CFE_ES_WriteToSysLog("OF_DEMO_APP: %s status telemetry MID read failed, RC=0x%08lx\n",
+                             Stage,
+                             (unsigned long)status);
+    }
+}
+
 static int32_t OF_DEMO_APP_PayloadEnableCmd(const OF_DEMO_PayloadEnableCmd_t *Msg)
 {
     CFE_Status_t status;
 
     (void)Msg;
 
+    OF_DEMO_APP_LogStatusTlmMsgId("before payload update");
+
     OF_DEMO_APP_Data.StatusTlm.Payload.PayloadEnabled     = true;
     OF_DEMO_APP_Data.StatusTlm.Payload.PayloadSampleCount = OF_DEMO_APP_Data.SampleCount;
+
+    OF_DEMO_APP_LogStatusTlmMsgId("before transmit");
 
     CFE_SB_TimeStampMsg(CFE_MSG_PTR(OF_DEMO_APP_Data.StatusTlm.TelemetryHeader));
     status = CFE_SB_TransmitMsg(CFE_MSG_PTR(OF_DEMO_APP_Data.StatusTlm.TelemetryHeader), true);
@@ -60,6 +84,8 @@ static CFE_Status_t OF_DEMO_APP_Init(void)
     CFE_Status_t status;
     CFE_SB_MsgId_t cmd_msg_id;
     CFE_SB_MsgId_t status_tlm_msg_id;
+    CFE_SB_MsgId_Atom_t cmd_mid_value;
+    CFE_SB_MsgId_Atom_t status_tlm_mid_value;
 
     memset(&OF_DEMO_APP_Data, 0, sizeof(OF_DEMO_APP_Data));
     OF_DEMO_APP_Data.RunStatus = CFE_ES_RunStatus_APP_RUN;
@@ -71,8 +97,16 @@ static CFE_Status_t OF_DEMO_APP_Init(void)
         return status;
     }
 
-    cmd_msg_id = CFE_SB_ValueToMsgId(CFE_PLATFORM_CMD_TOPICID_TO_MIDV(OF_DEMO_APP_CMD_TOPIC_ID));
-    status_tlm_msg_id = CFE_SB_ValueToMsgId(CFE_PLATFORM_TLM_TOPICID_TO_MIDV(OF_DEMO_APP_STATUS_TLM_TOPIC_ID));
+    cmd_mid_value        = CFE_PLATFORM_CMD_TOPICID_TO_MIDV(OF_DEMO_APP_CMD_TOPIC_ID);
+    status_tlm_mid_value = CFE_PLATFORM_TLM_TOPICID_TO_MIDV(OF_DEMO_APP_STATUS_TLM_TOPIC_ID);
+    cmd_msg_id           = CFE_SB_ValueToMsgId(cmd_mid_value);
+    status_tlm_msg_id    = CFE_SB_ValueToMsgId(status_tlm_mid_value);
+
+    CFE_ES_WriteToSysLog("OF_DEMO_APP: mapped CMD topic %u -> MID 0x%08lx; STATUS_TLM topic %u -> MID 0x%08lx\n",
+                         (unsigned int)OF_DEMO_APP_CMD_TOPIC_ID,
+                         (unsigned long)cmd_mid_value,
+                         (unsigned int)OF_DEMO_APP_STATUS_TLM_TOPIC_ID,
+                         (unsigned long)status_tlm_mid_value);
 
     status = CFE_MSG_Init(CFE_MSG_PTR(OF_DEMO_APP_Data.StatusTlm.TelemetryHeader),
                           status_tlm_msg_id,
@@ -83,6 +117,8 @@ static CFE_Status_t OF_DEMO_APP_Init(void)
                              (unsigned long)status);
         return status;
     }
+
+    OF_DEMO_APP_LogStatusTlmMsgId("after CFE_MSG_Init");
 
     status = CFE_SB_CreatePipe(&OF_DEMO_APP_Data.CommandPipe,
                                OF_DEMO_APP_CMD_PIPE_DEPTH,
