@@ -14,6 +14,7 @@ VALID_LOG="${P3_EVIDENCE_DIR}/nasa-sample-app-valid-noop.log"
 UNKNOWN_LOG="${P3_EVIDENCE_DIR}/nasa-sample-app-unknown-fc.log"
 RESULT_FILE="${P3_EVIDENCE_DIR}/nasa-sample-app-control.txt"
 UNKNOWN_FUNCTION_CODE="127"
+UNUSED_UDP_PORT="65534"
 
 CFS_PID=""
 
@@ -59,10 +60,8 @@ if [[ ! -x "$CPU_DIR/core-cpu1" || ! -x "$HOST_DIR/cmd_send" || ! -f "$STARTUP_F
   exit 0
 fi
 
-# This control removes OF_DEMO from startup and exercises only the stock NASA
-# sample_app command interface on the same pinned native_eds SampleMission.
-# The generated mission database is the already-built P2 database, but no
-# OrbitFabric application participates in the runtime path under observation.
+# Remove OF_DEMO from startup and exercise only the stock NASA sample_app
+# command interface on the same pinned native_eds SampleMission.
 tmp_startup="${STARTUP_FILE}.p3-sample-app"
 grep -v 'of_demo_app' "$STARTUP_FILE" > "$tmp_startup"
 mv "$tmp_startup" "$STARTUP_FILE"
@@ -76,33 +75,21 @@ CFS_PID=$!
 wait_for_pattern "$RUNTIME_LOG" 'Sample App Initialized' 'NASA sample_app initialization observed'
 wait_for_pattern "$RUNTIME_LOG" 'CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state' 'NASA SampleMission operational state observed'
 
-# Positive control: use the nominal EDS encoder to send the stock NoopCmd.
-VALID_BEFORE="$(wc -l < "$RUNTIME_LOG")"
+# Encode the stock NoopCmd through the nominal EDS encoder only to derive the
+# exact packet/APID. Send it to an unused UDP port so it does not enter the
+# runtime and cannot consume/filter the NOOP event that the unknown probe may
+# accidentally trigger.
 (
   cd "$HOST_DIR"
-  ./cmd_send -v -I SAMPLE_APP/CMD.NoopCmd
+  ./cmd_send -v -P "$UNUSED_UDP_PORT" -I SAMPLE_APP/CMD.NoopCmd
 ) > "$VALID_LOG" 2>&1
 
 if ! grep -F 'Using result from EDS encoder' "$VALID_LOG" >/dev/null 2>&1; then
-  echo "NASA sample_app positive control did not use EDS encoder" >&2
+  echo "NASA sample_app APID derivation did not use EDS encoder" >&2
   cat "$VALID_LOG" >&2
   exit 1
 fi
 
-for attempt in $(seq 1 20); do
-  if tail -n +$((VALID_BEFORE + 1)) "$RUNTIME_LOG" | grep -F 'SAMPLE: NOOP command' >/dev/null 2>&1; then
-    break
-  fi
-  sleep 1
-done
-
-if ! tail -n +$((VALID_BEFORE + 1)) "$RUNTIME_LOG" | grep -F 'SAMPLE: NOOP command' >/dev/null 2>&1; then
-  echo "NASA sample_app positive NoopCmd was not observed" >&2
-  exit 1
-fi
-
-# Derive APID from the exact positive EDS-encoded packet bytes instead of
-# copying the SampleMission topic/APID allocation into this evidence script.
 SAMPLE_APID="$(python3 - "$VALID_LOG" <<'PY'
 from pathlib import Path
 import re
@@ -158,8 +145,7 @@ done
 {
   printf '%s\n' '# NASA sample_app P3 control'
   printf '%s\n' 'orbitfabric_app_started=false'
-  printf '%s\n' 'positive_control=SAMPLE_APP/CMD.NoopCmd'
-  printf '%s\n' 'positive_control_encoder=EDS'
+  printf '%s\n' 'apid_derivation=SAMPLE_APP/CMD.NoopCmd encoded by EDS to unused UDP port'
   printf 'derived_sample_app_apid=%s\n' "$SAMPLE_APID"
   printf 'unknown_function_code=%s\n' "$UNKNOWN_FUNCTION_CODE"
   printf '%s\n' 'unknown_probe_encoder=PassThrough'
