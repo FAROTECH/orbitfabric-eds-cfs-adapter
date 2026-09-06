@@ -20,7 +20,6 @@ B8_GOLDEN="${ADAPTER_ROOT}/tests/fixtures/p0_b8/expected.json"
 APP_SOURCE="${ADAPTER_ROOT}/examples/cfs/of_demo_app"
 STAGED_EDS="${APP_DIR}/eds/of_demo.xml"
 SOURCE_LIST="${BUILD_DIR}/edstool-sources-SampleMission.mk"
-COMPILE_DB="${BUILD_DIR}/compile_commands.json"
 
 sha256_file() {
   sha256sum "$1" | awk '{print $1}'
@@ -113,17 +112,24 @@ printf '%s\n' "Compiling complete native_eds mission"
 run_positive_goal native_eds.compile positive-compile.log
 require_file "$BUILD_DIR/stamp.compile" "native_eds compile stamp"
 
-# cFS native_* is a composed build.  The top-level compile database does not
-# necessarily aggregate compile commands emitted by every nested application
-# build, so it is retained as optional diagnostic evidence rather than used as
-# the participation gate.  Native build output plus the produced module are
-# the authoritative P1 evidence for the external app.
+# cFS native_* is a composed build and may emit multiple compile databases.
+# Require the external application source to appear in at least one of them;
+# do not assume the top-level compile_commands.json aggregates nested app builds.
 find "$BUILD_DIR" -type f -name 'compile_commands.json' -print | sort \
   > "$EVIDENCE_DIR/compile-db-candidates.txt"
+if [[ ! -s "$EVIDENCE_DIR/compile-db-candidates.txt" ]]; then
+  echo "no compile_commands.json emitted by composed native build" >&2
+  exit 1
+fi
+
 : > "$EVIDENCE_DIR/of-demo-compile-command.txt"
 while IFS= read -r compile_db; do
   grep -F "of_demo_app.c" "$compile_db" >> "$EVIDENCE_DIR/of-demo-compile-command.txt" || true
 done < "$EVIDENCE_DIR/compile-db-candidates.txt"
+if [[ ! -s "$EVIDENCE_DIR/of-demo-compile-command.txt" ]]; then
+  echo "of_demo_app.c not found in any compile database emitted by composed native build" >&2
+  exit 1
+fi
 
 if ! grep -F 'Building C object apps/of_demo_app/' "$EVIDENCE_DIR/positive-compile.log" >/dev/null \
   || ! grep -F 'Linking C shared module of_demo_app.so' "$EVIDENCE_DIR/positive-compile.log" >/dev/null \
