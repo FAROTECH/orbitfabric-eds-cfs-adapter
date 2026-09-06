@@ -8,7 +8,8 @@ OrbitFabric adapter bridging mission contracts through a CCSDS EDS realization i
 maturity         experimental / pre-release
 P0               complete: deterministic OF -> EDS projection + traceability + native EdsLib validation
 P1               complete: pinned native_eds build/install with fixed cFS consumer
-P2               active: runtime command/telemetry proof
+P2               complete: generated runtime command/telemetry proof + constraint characterization
+P3               complete: negative/conformance runtime behavior characterized on frozen lane
 public release   none yet
 ```
 
@@ -37,13 +38,16 @@ commands
 telemetry
 packet membership
 command_sequence / expected_outputs traceability
+native build/install dependency
+runtime command/telemetry closed loop
+runtime conformance characterization
 ```
 
 P0 proves deterministic EDS XML, machine-readable traceability, Core-conformant Integration Results, deterministic failure semantics and native EdsLib processing against exact pinned upstream refs.
 
 P1 proves that a fixed product-owned cFS application can consume interfaces generated from the retained OF_DEMO EDS and be compiled, linked, installed and staged through the pinned `native_eds` mission build.
 
-P2 is the active gate. Its first runtime slice is intentionally narrow:
+P2 proves the retained EDS-backed runtime lane:
 
 ```text
 payload.enable
@@ -56,6 +60,14 @@ payload.enable
     -> EDS-enabled tlm_recv
     -> PayloadEnabled=true
 ```
+
+P2 also characterizes projected `ValidRange` metadata versus runtime behavior: the pinned lane delivers both in-range and out-of-range `PeriodMs` values to the typed handler, so this adapter does not claim automatic runtime enforcement of every projected range constraint.
+
+P3 pressure-tests the same frozen runtime lane with a structurally valid OF_DEMO command carrying undefined Function Code 127. The observed lane dispatches that command to the valid generated `payload.enable` typed handler. A dedicated evidence-only EdsLib intervention preserves known derived commands and a genuinely non-derived NASA SAMPLE_APP command while making the unmatched-derived case fail closed.
+
+P3 therefore closes as a characterization, not as a claim of automatic unknown-command rejection. No adapter-local Function Code guard, Core change or Projection Profile workaround is introduced.
+
+See [coverage/integration-coverage.md](coverage/integration-coverage.md) for the exact claim boundaries.
 
 No generic/full CCSDS EDS interoperability claim, generic OrbitFabric ACK realization, or complete cFS integration coverage is made yet.
 
