@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is currently a private experimental OrbitFabric adapter workspace.
+This repository is an experimental, pre-release OrbitFabric adapter under active evidence-driven development.
 
 ## Current development rule
 
@@ -16,7 +16,7 @@ pytest -q
 python -m build --wheel
 ```
 
-Tests that depend on OrbitFabric Core use the exact Core `v1.3.0` baseline selected by CI.
+Tests that depend on OrbitFabric Core use the exact Core `v1.3.0` baseline selected by CI. Native cFS/EdsLib proofs use exact upstream commits recorded in their harnesses.
 
 ## Architecture findings
 
@@ -29,6 +29,12 @@ If implementation suggests any of the following, stop the product change and ret
 - a generic CCSDS EDS interoperability claim;
 - a target identifier that appears to need Core ownership.
 
+Downstream failures must first be isolated as adapter realization, fixed-app, mission integration/runtime configuration, evidence-harness, upstream/toolchain or CI/environment findings.
+
 ## NASA dependencies
 
 Do not vendor cFS or EdsLib into this repository. Native validation workspaces must use exact pinned upstream refs and remain disposable.
+
+## Current maturity
+
+P0 deterministic projection/native EdsLib validation and P1 complete native build/install are proven. P2 runtime command/telemetry acceptance remains in progress. No versioned public release is claimed yet.
