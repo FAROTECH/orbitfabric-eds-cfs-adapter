@@ -56,7 +56,7 @@ git -C "$CFS_DIR" submodule update --init --recursive
 [[ "$(git -C "$CFS_DIR/apps/sample_app" rev-parse HEAD)" == "$SAMPLE_APP_COMMIT" ]]
 [[ "$(git -C "$CFS_DIR/apps/ci_lab" rev-parse HEAD)" == "$CI_LAB_COMMIT" ]]
 [[ "$(git -C "$CFS_DIR/apps/to_lab" rev-parse HEAD)" == "$TO_LAB_COMMIT" ]]
-[[ "$(git -C "$CFS_DIR/tools/command-line" rev-parse HEAD)" == "$COMMANDLINE_TOOLS_COMMIT" ]]
+[[ "$(git -C "$CFS_DIR/tools/commandline-tools" rev-parse HEAD)" == "$COMMANDLINE_TOOLS_COMMIT" ]]
 
 cat > "$EVIDENCE_DIR/baseline.txt" <<EOF
 cfs=$CFS_COMMIT
