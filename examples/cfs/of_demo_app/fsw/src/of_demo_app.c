@@ -8,7 +8,7 @@
 #include "of_demo_eds_typedefs.h"
 
 #define OF_DEMO_APP_CMD_TOPIC_ID        160
-#define OF_DEMO_APP_STATUS_TLM_TOPIC_ID 161
+#define OF_DEMO_APP_STATUS_TLM_TOPIC_ID 416
 #define OF_DEMO_APP_CMD_PIPE_DEPTH      8
 #define OF_DEMO_APP_CMD_PIPE_NAME       "OF_DEMO_CMD_PIPE"
 
@@ -81,11 +81,11 @@ static const EdsDispatchTable_EdsComponent_OF_DEMO_Application_CFE_SB_Telecomman
 
 static CFE_Status_t OF_DEMO_APP_Init(void)
 {
-    CFE_Status_t status;
-    CFE_SB_MsgId_t cmd_msg_id;
-    CFE_SB_MsgId_t status_tlm_msg_id;
-    CFE_SB_MsgId_Atom_t cmd_mid_value;
-    CFE_SB_MsgId_Atom_t status_tlm_mid_value;
+    CFE_Status_t         status;
+    CFE_SB_MsgId_t       cmd_msg_id;
+    CFE_SB_MsgId_t       status_tlm_msg_id;
+    CFE_SB_MsgId_Atom_t  cmd_mid_value;
+    CFE_SB_MsgId_Atom_t  status_tlm_mid_value;
 
     memset(&OF_DEMO_APP_Data, 0, sizeof(OF_DEMO_APP_Data));
     OF_DEMO_APP_Data.RunStatus = CFE_ES_RunStatus_APP_RUN;
@@ -107,6 +107,22 @@ static CFE_Status_t OF_DEMO_APP_Init(void)
                          (unsigned long)cmd_mid_value,
                          (unsigned int)OF_DEMO_APP_STATUS_TLM_TOPIC_ID,
                          (unsigned long)status_tlm_mid_value);
+
+    if (!CFE_SB_IsValidMsgId(cmd_msg_id))
+    {
+        CFE_ES_WriteToSysLog("OF_DEMO_APP: CMD topic %u mapped to invalid MID 0x%08lx\n",
+                             (unsigned int)OF_DEMO_APP_CMD_TOPIC_ID,
+                             (unsigned long)cmd_mid_value);
+        return CFE_SB_BAD_ARGUMENT;
+    }
+
+    if (!CFE_SB_IsValidMsgId(status_tlm_msg_id))
+    {
+        CFE_ES_WriteToSysLog("OF_DEMO_APP: STATUS_TLM topic %u mapped to invalid MID 0x%08lx\n",
+                             (unsigned int)OF_DEMO_APP_STATUS_TLM_TOPIC_ID,
+                             (unsigned long)status_tlm_mid_value);
+        return CFE_SB_BAD_ARGUMENT;
+    }
 
     status = CFE_MSG_Init(CFE_MSG_PTR(OF_DEMO_APP_Data.StatusTlm.TelemetryHeader),
                           status_tlm_msg_id,
