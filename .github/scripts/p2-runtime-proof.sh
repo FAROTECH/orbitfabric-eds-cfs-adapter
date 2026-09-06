@@ -24,10 +24,12 @@ APP_SOURCE="${ADAPTER_ROOT}/examples/cfs/of_demo_app"
 STAGED_EDS="${APP_DIR}/eds/of_demo.xml"
 TO_SUB_SOURCE="${CFS_DIR}/sample_defs/tables/to_lab_sub.c"
 STARTUP_FILE="${CPU_CF_DIR}/cfe_es_startup.scr"
+STARTUP_BASELINE="${EVIDENCE_DIR}/cfe_es_startup.without-of-demo.scr"
 CFS_LOG="${EVIDENCE_DIR}/cfs-runtime.log"
 TLM_LOG="${EVIDENCE_DIR}/tlm-recv.log"
 TO_ENABLE_LOG="${EVIDENCE_DIR}/to-enable-command.log"
 OF_ENABLE_LOG="${EVIDENCE_DIR}/of-enable-command.log"
+STARTUP_CONTROL_LOG="${EVIDENCE_DIR}/startup-control-cfs.log"
 
 CFS_PID=""
 TLM_PID=""
@@ -198,6 +200,12 @@ require_executable "$HOST_DIR/cmd_send" "staged EDS cmd_send"
 require_executable "$HOST_DIR/tlm_recv" "staged EDS tlm_recv"
 require_file "$STARTUP_FILE" "generated CPU1 startup script"
 
+cp "$STARTUP_FILE" "$STARTUP_BASELINE"
+if grep -F 'of_demo_app' "$STARTUP_BASELINE" >/dev/null 2>&1; then
+  echo "generated baseline startup script unexpectedly contains of_demo_app" >&2
+  exit 1
+fi
+
 cat >> "$STARTUP_FILE" <<'EOF'
 CFE_APP, of_demo_app, OF_DEMO_APP_Main, OF_DEMO_APP, 55, 32768, 0x0, 0;
 EOF
@@ -265,6 +273,54 @@ wait_for_pattern "$TLM_LOG" 'PayloadEnabled[[:space:]]*=[[:space:]]*(true|1)' \
   grep -E 'PayloadEnabled[[:space:]]*=[[:space:]]*(true|1)' "$TLM_LOG" | tail -n 1
 } > "$EVIDENCE_DIR/p2-a-acceptance.txt"
 
+# P2-A7 startup dependency control: use the exact same built/staged image,
+# but restore the generated startup script from before OF_DEMO was appended.
+kill "$CFS_PID" 2>/dev/null || true
+wait "$CFS_PID" 2>/dev/null || true
+CFS_PID=""
+kill "$TLM_PID" 2>/dev/null || true
+wait "$TLM_PID" 2>/dev/null || true
+TLM_PID=""
+
+cp "$STARTUP_BASELINE" "$STARTUP_FILE"
+if grep -F 'of_demo_app' "$STARTUP_FILE" >/dev/null 2>&1; then
+  echo "OF_DEMO startup entry still present in startup dependency control" >&2
+  exit 1
+fi
+require_file "$CPU_CF_DIR/of_demo_app.so" "staged of_demo_app module for startup control"
+
+(
+  cd "$CPU_DIR"
+  stdbuf -oL -eL ./core-cpu1
+) > "$STARTUP_CONTROL_LOG" 2>&1 &
+CFS_PID=$!
+
+wait_for_pattern "$STARTUP_CONTROL_LOG" 'CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state' \
+  'startup control cFS operational state observed'
+sleep 2
+
+if ! kill -0 "$CFS_PID" 2>/dev/null; then
+  echo "cFS did not remain operational during startup dependency control" >&2
+  exit 1
+fi
+if grep -E 'OF_DEMO_APP|Loading file: /cf/of_demo_app\.so' "$STARTUP_CONTROL_LOG" >/dev/null 2>&1; then
+  echo "OF_DEMO unexpectedly started when startup inclusion was omitted" >&2
+  exit 1
+fi
+
+{
+  printf '%s\n' '# P2-A startup dependency control'
+  printf '%s\n' 'same_built_staged_image=true'
+  printf '%s\n' 'of_demo_app_module_staged=true'
+  printf '%s\n' 'of_demo_startup_entry_present=false'
+  grep -F 'CFE_ES_Main: CFE_ES_Main entering OPERATIONAL state' "$STARTUP_CONTROL_LOG" | tail -n 1
+  printf '%s\n' 'of_demo_runtime_initialization_observed=false'
+} > "$EVIDENCE_DIR/p2-a-startup-control.txt"
+
+kill "$CFS_PID" 2>/dev/null || true
+wait "$CFS_PID" 2>/dev/null || true
+CFS_PID=""
+
 require_sha256 "$B6_SOURCE" "$B6_SHA256" "retained B6 after runtime"
 
-printf '%s\n' "P2-A EDS-backed runtime command/telemetry proof completed"
+printf '%s\n' "P2-A EDS-backed runtime command/telemetry proof and startup dependency control completed"
