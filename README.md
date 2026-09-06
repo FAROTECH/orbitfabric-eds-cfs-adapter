@@ -1,19 +1,18 @@
 # OrbitFabric EDS-cFS Adapter
 
-Private experimental adapter workspace for bridging OrbitFabric mission contracts through a CCSDS EDS realization into the NASA cFS / EdsLib integration lane.
+OrbitFabric adapter bridging mission contracts through a CCSDS EDS realization into the NASA cFS / EdsLib integration lane.
 
 ## Status
 
 ```text
-maturity         experimental / PoC
-current gate     C0 bootstrap conformity
-next gate        P0 projection proof
-public release   none
+maturity         experimental / pre-release
+P0               complete: deterministic OF -> EDS projection + traceability + native EdsLib validation
+P1               complete: pinned native_eds build/install with fixed cFS consumer
+P2               active: runtime command/telemetry proof
+public release   none yet
 ```
 
-This repository is intentionally bootstrapped clean rather than created from `orbitfabric-adapter-template`.
-
-That bootstrap choice does **not** define a different adapter contract. The repository is required to remain conformant with OrbitFabric Core contracts and with the responsibility/readiness model defined by the OrbitFabric Adapter Developer Template.
+This repository is intentionally clean-bootstrapped rather than created from `orbitfabric-adapter-template`. That choice does not define a different adapter contract: the implementation remains conformant with OrbitFabric Core contracts and with the responsibility/readiness model defined by the OrbitFabric Adapter Developer Template.
 
 ## Integration topology
 
@@ -29,37 +28,60 @@ OrbitFabric Mission Model
 
 The EDS artifact is an explicit interoperability boundary. It must not be bypassed by hidden direct cFS inference.
 
+## Proven scope
+
+The current retained proof slice covers:
+
+```text
+commands
+telemetry
+packet membership
+command_sequence / expected_outputs traceability
+```
+
+P0 proves deterministic EDS XML, machine-readable traceability, Core-conformant Integration Results, deterministic failure semantics and native EdsLib processing against exact pinned upstream refs.
+
+P1 proves that a fixed product-owned cFS application can consume interfaces generated from the retained OF_DEMO EDS and be compiled, linked, installed and staged through the pinned `native_eds` mission build.
+
+P2 is the active gate. Its first runtime slice is intentionally narrow:
+
+```text
+payload.enable
+    -> EDS-enabled cmd_send
+    -> cFS / ci_lab
+    -> generated OF_DEMO dispatcher
+    -> fixed application handler
+    -> PayloadStatusTlm
+    -> to_lab
+    -> EDS-enabled tlm_recv
+    -> PayloadEnabled=true
+```
+
+No generic/full CCSDS EDS interoperability claim, generic OrbitFabric ACK realization, or complete cFS integration coverage is made yet.
+
 ## Architecture authority
 
-Cross-repository architecture, hypotheses, evidence, falsification and sequencing are owned by the private `OrbitFabric-Architecture-Lab` repository.
+Cross-repository architecture, hypotheses, evidence, falsification and sequencing are maintained in the private OrbitFabric Architecture Lab.
 
-This repository owns only the adapter implementation, local product tests, PoC harnesses and generated artifacts.
+This repository owns only the adapter implementation, local product tests, proof harnesses and product evidence. If implementation evidence suggests a Core contract change, ownership change, different integration topology or broader interoperability claim, the finding returns to Architecture Lab before product scope is changed.
 
-If implementation evidence suggests a Core contract change, an ownership change, a different integration topology or a broader public interoperability claim, work stops here and the finding returns to Architecture Lab first.
-
-## Frozen upstream PoC baseline
+## Frozen upstream baseline
 
 ```text
-NASA cFS v7.0.1
+NASA cFS
     088b2fa828db9ff7e00733f1908e0eeb59f66ce3
 
-NASA EdsLib v7.0.1
+NASA EdsLib
     2acc963b34f77692c6396555dcfb10ef43eb1046
+
+NASA cFE
+    c5fb2b4d540bd55eb6c3707da7dd13eee679d4dd
 ```
 
-The initial work does not vendor either upstream repository.
+Additional cFS sample applications and command-line tools used by native proofs are also pinned by exact commit in the corresponding CI harnesses.
 
-## Scope now
+NASA sources are not vendored into this repository.
 
-C0 establishes a clean, installable, Core-conformant adapter skeleton before substantive EDS projection code is written.
+## Development
 
-P0 will then prove:
-
-```text
-Core Integration Input Set
-    -> explicit Projection Profile
-    -> deterministic EDS XML
-    -> machine-readable traceability
-```
-
-No generic CCSDS EDS support claim is made at this stage.
+See [docs/development.md](docs/development.md) for local checks and native-proof notes, [docs/architecture-and-ownership.md](docs/architecture-and-ownership.md) for ownership boundaries, and [coverage/integration-coverage.md](coverage/integration-coverage.md) for the evidence-backed coverage disposition.
