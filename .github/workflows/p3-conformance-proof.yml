@@ -29,6 +29,14 @@ jobs:
       - name: Execute P3 EDS-cFS conformance proof
         run: bash .github/scripts/p3-conformance-proof.sh
 
+      - name: Classify P3 unknown-command outcome
+        if: ${{ always() }}
+        run: bash .github/scripts/p3-postmortem.sh
+
+      - name: Run NASA sample_app unknown-command control
+        if: ${{ always() }}
+        run: bash .github/scripts/p3-nasa-sample-app-control.sh
+
       - name: Upload P3 conformance evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
