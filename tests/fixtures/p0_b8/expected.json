@@ -19,7 +19,7 @@
       "reason": null,
       "requirement": "required",
       "retained_partial": false,
-      "sha256": "3586e1bbec5d13cff10e6310a71771e8f2b10ba1e084c681a7083ebc43e02a4e",
+      "sha256": "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b",
       "status": "generated"
     },
     {
@@ -37,7 +37,7 @@
       "reason": null,
       "requirement": "required",
       "retained_partial": false,
-      "sha256": "8984eb984ec74c842681d024de617cbb8adf6aa05bf27fa67f0a4014541f859d",
+      "sha256": "78f8bde50ba4a154547191e5ccee5b246b8d17e1cfd8cbb7ff37ba3b5f86064f",
       "status": "generated"
     }
   ],
@@ -155,7 +155,7 @@
       "kind": "orbitfabric.projection_profile",
       "profile_version": "0.1-candidate",
       "reason": null,
-      "sha256": "f8e380f165d15cebb8ccdd83c00791ffa4414102887fcbc934332c4189a43350",
+      "sha256": "710fc8abb6103d8ef26bb5ee0b8cce98c599c14adaed7a0df2ae499515fa11e3",
       "status": "available",
       "version": "0.1.0"
     }
@@ -481,7 +481,7 @@
           "id": "payload_status"
         }
       ],
-      "value": 161
+      "value": 416
     },
     {
       "binding": "packet.payload-status",
