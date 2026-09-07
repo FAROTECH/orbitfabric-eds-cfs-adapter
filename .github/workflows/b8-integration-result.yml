@@ -91,7 +91,7 @@ jobs:
               profile_path.read_bytes()
           ).hexdigest()
           assert result["inputs"]["profile"]["sha256"] == (
-              "710fc8abb6103d8ef26bb5ee0b8cce98c599c14adaed7a0df2ae499515fa11e3"
+              "bf5e5d4f85636c3f389da091a71a30b785125aaa559145cf899d90431738ed18"
           )
 
           assert result["capabilities"] == [
@@ -106,6 +106,22 @@ jobs:
 
           assert result["mappings"] == trace["mappings"]
           assert result["resolutions"] == trace["resolutions"]
+
+          command_allocation = next(
+              item for item in result["resolutions"]
+              if item["id"] == "resolution.commands.payload.enable.command_topic_ref"
+          )
+          assert command_allocation["property"] == "cfs.command_topic_ref"
+          assert command_allocation["value"] == "CFE_MISSION/OF_DEMO_CMD_TOPICID"
+          assert command_allocation["origin"] == "profile"
+
+          telemetry_allocation = next(
+              item for item in result["resolutions"]
+              if item["id"] == "resolution.packets.payload_status.telemetry_topic_ref"
+          )
+          assert telemetry_allocation["property"] == "cfs.telemetry_topic_ref"
+          assert telemetry_allocation["value"] == "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
+          assert telemetry_allocation["origin"] == "profile"
 
           coverage = result["coverage"]
           assert coverage["status"] == "complete"
@@ -124,10 +140,10 @@ jobs:
               trace_path.read_bytes()
           ).hexdigest()
           assert artifacts["eds.package"]["sha256"] == (
-              "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+              "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
           )
           assert artifacts["traceability"]["sha256"] == (
-              "78f8bde50ba4a154547191e5ccee5b246b8d17e1cfd8cbb7ff37ba3b5f86064f"
+              "3480f57f0461839ec66b62ded192be2aac71f2446b5baa869e82f410256a20f8"
           )
 
           enabled = next(
@@ -139,9 +155,9 @@ jobs:
 
           result_bytes = result_path.read_bytes()
           assert result_bytes == golden_path.read_bytes()
-          assert len(result_bytes) == 13168
+          assert len(result_bytes) == 13271
           assert hashlib.sha256(result_bytes).hexdigest() == (
-              "0cd845a656d8a04ffc118e9feae71ecbff848982d2b6e39f19bdf36d05b20310"
+              "38705931d3c89b16522c94ff180dcaa349ded32f8d51cab04d2b85389a274322"
           )
           print("B8 Core-conformant Integration Result: PASS")
           PY
