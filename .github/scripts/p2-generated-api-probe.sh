@@ -8,7 +8,7 @@ SAMPLE_APP_COMMIT="2f93d1a4159a02b18d67ee83342c9e96b90e23e4"
 CI_LAB_COMMIT="f5d36625336249312ee9d5815bc875e231815bb4"
 TO_LAB_COMMIT="38f7312ec4c1109b8f1c0738730b6e5ac5860f05"
 COMMANDLINE_TOOLS_COMMIT="d70c56ec035694c9a64b317897403266166f5d68"
-B6_SHA256="e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+B6_SHA256="afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
 
 ADAPTER_ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
 RUN_ROOT="${RUNNER_TEMP:-/tmp}"
@@ -20,6 +20,7 @@ EVIDENCE_DIR="${RUN_ROOT}/orbitfabric-eds-cfs-p2-probe-evidence"
 GENERATED_DIR="${EVIDENCE_DIR}/generated"
 B6_SOURCE="${ADAPTER_ROOT}/tests/fixtures/p0_b6/expected.xml"
 APP_SOURCE="${ADAPTER_ROOT}/examples/cfs/of_demo_app"
+ALLOCATION_SCRIPT="${ADAPTER_ROOT}/.github/scripts/stage-reference-topic-allocations.sh"
 STAGED_EDS="${APP_DIR}/eds/of_demo.xml"
 
 sha256_file() {
@@ -58,6 +59,8 @@ git -C "$CFS_DIR" submodule update --init --recursive
 [[ "$(git -C "$CFS_DIR/apps/to_lab" rev-parse HEAD)" == "$TO_LAB_COMMIT" ]]
 [[ "$(git -C "$CFS_DIR/tools/commandline-tools" rev-parse HEAD)" == "$COMMANDLINE_TOOLS_COMMIT" ]]
 
+bash "$ALLOCATION_SCRIPT" "$CFS_DIR"
+
 cat > "$EVIDENCE_DIR/baseline.txt" <<EOF
 cfs=$CFS_COMMIT
 edslib=$EDSLIB_COMMIT
@@ -67,6 +70,8 @@ ci_lab=$CI_LAB_COMMIT
 to_lab=$TO_LAB_COMMIT
 commandline_tools=$COMMANDLINE_TOOLS_COMMIT
 b6_sha256=$B6_SHA256
+command_topic_ref=CFE_MISSION/OF_DEMO_CMD_TOPICID
+telemetry_topic_ref=CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID
 EOF
 
 cp -R "$APP_SOURCE" "$APP_DIR"
