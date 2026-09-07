@@ -29,6 +29,7 @@ TYPE_REFS = {
 }
 
 _NAME_TOKEN = re.compile(r"[A-Za-z0-9]+")
+_TOPIC_REF = re.compile(r"^CFE_MISSION/[A-Za-z_][A-Za-z0-9_]*$")
 
 
 class ProjectionModelError(ValueError):
@@ -69,7 +70,7 @@ class EdsInterface:
     interface_type: str
     generic_type_name: str
     generic_type_ref: str
-    topic_id: int
+    topic_ref: str
     topic_variable: str
 
 
@@ -78,7 +79,7 @@ class EdsVariable:
     name: str
     type_ref: str
     read_only: bool
-    initial_value: int
+    initial_value: str
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,14 @@ def eds_name_v1(value: str) -> str:
     if name[0].isdigit():
         name = "N" + name
     return name
+
+
+def eds_design_parameter_expression(topic_ref: str) -> str:
+    """Render one accepted mission-owned TopicId reference as an EDS expression."""
+
+    if not _TOPIC_REF.fullmatch(topic_ref):
+        raise ProjectionModelError(f"invalid cFS mission TopicId reference: {topic_ref!r}")
+    return "${" + topic_ref + "}"
 
 
 def _type_ref(semantic_type: str) -> str:
@@ -217,6 +226,13 @@ def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
             f"interface name collision: {resolved.command_interface.name}"
         )
 
+    command_topic_expression = eds_design_parameter_expression(
+        resolved.command_interface.topic_ref
+    )
+    telemetry_topic_expression = eds_design_parameter_expression(
+        resolved.telemetry_interface.topic_ref
+    )
+
     command_topic_variable = eds_name_v1(resolved.command_interface.name) + "TopicId"
     telemetry_topic_variable = eds_name_v1(resolved.telemetry_interface.name) + "TopicId"
     if command_topic_variable == telemetry_topic_variable:
@@ -306,7 +322,7 @@ def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
         interface_type=COMMAND_INTERFACE_TYPE,
         generic_type_name=COMMAND_GENERIC_TYPE,
         generic_type_ref=COMMAND_BASE_NAME,
-        topic_id=resolved.command_interface.topic_id,
+        topic_ref=resolved.command_interface.topic_ref,
         topic_variable=command_topic_variable,
     )
     telemetry_interface = EdsInterface(
@@ -314,7 +330,7 @@ def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
         interface_type=TELEMETRY_INTERFACE_TYPE,
         generic_type_name=TELEMETRY_GENERIC_TYPE,
         generic_type_ref=telemetry_message_name,
-        topic_id=resolved.telemetry_interface.topic_id,
+        topic_ref=resolved.telemetry_interface.topic_ref,
         topic_variable=telemetry_topic_variable,
     )
 
@@ -323,13 +339,13 @@ def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
             name=command_topic_variable,
             type_ref=TOPIC_ID_TYPE,
             read_only=True,
-            initial_value=resolved.command_interface.topic_id,
+            initial_value=command_topic_expression,
         ),
         EdsVariable(
             name=telemetry_topic_variable,
             type_ref=TOPIC_ID_TYPE,
             read_only=True,
-            initial_value=resolved.telemetry_interface.topic_id,
+            initial_value=telemetry_topic_expression,
         ),
     )
     parameter_maps = (
