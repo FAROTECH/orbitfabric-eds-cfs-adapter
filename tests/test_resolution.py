@@ -99,8 +99,10 @@ def test_canonical_profile_resolves_against_core() -> None:
 
     assert resolved.profile_id == "eds-cfs-p0"
     assert resolved.package_name == "OF_DEMO"
-    assert resolved.command_interface.topic_id == 160
-    assert resolved.telemetry_interface.topic_id == 416
+    assert resolved.command_interface.topic_ref == "CFE_MISSION/OF_DEMO_CMD_TOPICID"
+    assert resolved.telemetry_interface.topic_ref == (
+        "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
+    )
     assert [(item.source_id, item.function_code) for item in resolved.commands] == [
         ("payload.enable", 0),
         ("payload.set_period", 1),
@@ -186,11 +188,13 @@ def test_duplicate_function_code_fails_closed() -> None:
         resolve_profile(profile, _core())
 
 
-def test_topic_id_collision_fails_closed() -> None:
+def test_topic_ref_collision_fails_closed() -> None:
     profile = _profile()
-    profile["settings"]["interfaces"]["telemetry"]["topic_id"] = 160
+    profile["settings"]["interfaces"]["telemetry"]["topic_ref"] = (
+        profile["settings"]["interfaces"]["command"]["topic_ref"]
+    )
 
-    with pytest.raises(ResolutionError, match="Topic ID collision"):
+    with pytest.raises(ResolutionError, match="Topic reference collision"):
         resolve_profile(profile, _core())
 
 
