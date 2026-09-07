@@ -31,8 +31,10 @@ from orbitfabric_eds_cfs_adapter.projection.traceability import (
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b7" / "expected.json"
-EXPECTED_SHA256 = "78f8bde50ba4a154547191e5ccee5b246b8d17e1cfd8cbb7ff37ba3b5f86064f"
-EXPECTED_B6_SHA256 = "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+EXPECTED_SHA256 = "3480f57f0461839ec66b62ded192be2aac71f2446b5baa869e82f410256a20f8"
+EXPECTED_B6_SHA256 = "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
+COMMAND_TOPIC_REF = "CFE_MISSION/OF_DEMO_CMD_TOPICID"
+TELEMETRY_TOPIC_REF = "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
 
 
 def _resolved() -> ResolvedProfile:
@@ -41,8 +43,10 @@ def _resolved() -> ResolvedProfile:
         profile_version="0.1.0",
         package_name="OF_DEMO",
         component_name="Application",
-        command_interface=ResolvedInterface(name="CMD", topic_id=160),
-        telemetry_interface=ResolvedInterface(name="STATUS_TLM", topic_id=416),
+        command_interface=ResolvedInterface(name="CMD", topic_ref=COMMAND_TOPIC_REF),
+        telemetry_interface=ResolvedInterface(
+            name="STATUS_TLM", topic_ref=TELEMETRY_TOPIC_REF
+        ),
         commands=(
             ResolvedCommandBinding(
                 binding_id="cmd.payload-enable",
@@ -115,7 +119,7 @@ def test_traceability_matches_retained_golden_bytes() -> None:
     actual = serialize_traceability(payload)
 
     assert actual == GOLDEN.read_bytes()
-    assert len(actual) == 9186
+    assert len(actual) == 9289
     assert hashlib.sha256(actual).hexdigest() == EXPECTED_SHA256
     assert payload["artifact"]["sha256"] == EXPECTED_B6_SHA256
 
@@ -178,11 +182,12 @@ def test_command_mapping_and_resolution_provenance_are_explicit() -> None:
     )
     assert (function_code["value"], function_code["origin"]) == (1, "profile")
 
-    topic_id = _resolution(
+    topic_ref = _resolution(
         payload,
-        "resolution.commands.payload.set_period.command_topic_id",
+        "resolution.commands.payload.set_period.command_topic_ref",
     )
-    assert (topic_id["value"], topic_id["origin"]) == (160, "profile")
+    assert (topic_ref["value"], topic_ref["origin"]) == (COMMAND_TOPIC_REF, "profile")
+    assert topic_ref["property"] == "cfs.command_topic_ref"
 
     type_ref = _resolution(
         payload,
@@ -225,10 +230,13 @@ def test_packet_and_telemetry_traceability_are_explicit() -> None:
         "OF_DEMO/Application/STATUS_TLM",
         "OF_DEMO/Application/STATUSTLMTopicId",
     }
-    assert _resolution(
+    telemetry_ref = _resolution(
         payload,
-        "resolution.packets.payload_status.telemetry_topic_id",
-    )["value"] == 416
+        "resolution.packets.payload_status.telemetry_topic_ref",
+    )
+    assert telemetry_ref["value"] == TELEMETRY_TOPIC_REF
+    assert telemetry_ref["property"] == "cfs.telemetry_topic_ref"
+    assert telemetry_ref["origin"] == "profile"
 
     enabled = _mapping(payload, "mapping.telemetry.payload.enabled")
     assert enabled["profile_bindings"] == ["packet.payload-status"]
@@ -274,13 +282,24 @@ def test_function_code_mismatch_fails_closed() -> None:
         build_traceability(resolved, model, xml)
 
 
-def test_topic_id_mismatch_fails_closed() -> None:
+def test_topic_ref_mismatch_fails_closed() -> None:
     resolved, model, xml = _stages()
     interfaces = list(model.interfaces)
-    interfaces[0] = replace(interfaces[0], topic_id=999)
+    interfaces[0] = replace(
+        interfaces[0], topic_ref="CFE_MISSION/OTHER_CMD_TOPICID"
+    )
 
-    with pytest.raises(TraceabilityError, match="Topic ID mismatch"):
+    with pytest.raises(TraceabilityError, match="Topic reference mismatch"):
         build_traceability(resolved, replace(model, interfaces=tuple(interfaces)), xml)
+
+
+def test_topic_variable_expression_mismatch_fails_closed() -> None:
+    resolved, model, xml = _stages()
+    variables = list(model.variables)
+    variables[0] = replace(variables[0], initial_value="${CFE_MISSION/OTHER_CMD_TOPICID}")
+
+    with pytest.raises(TraceabilityError, match="TopicId variable mismatch"):
+        build_traceability(resolved, replace(model, variables=tuple(variables)), xml)
 
 
 def test_command_payload_link_mismatch_fails_closed() -> None:
