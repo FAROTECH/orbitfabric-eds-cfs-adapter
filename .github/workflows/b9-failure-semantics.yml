@@ -177,7 +177,7 @@ jobs:
                   "schema": "0.1-candidate",
                   "coverage": "unavailable",
                   "size": 2579,
-                  "sha256": "7a0824c77344c08814c76c090c1b06aaac5007e864e2712eadcd1ab9c411adf7",
+                  "sha256": "17d48138ee63504e2cc5368397fd07dbc92ea09fdd8a530c1ad0e61b743b9ddd",
               },
               "b5": {
                   "phase": "projection_validation",
@@ -188,7 +188,7 @@ jobs:
                   "schema": "0.1-candidate",
                   "coverage": "complete",
                   "size": 4570,
-                  "sha256": "014a9c634f4a0e110f688f37e6ce8cd67ae82c4eb3a1219beabcff6b0d0822d0",
+                  "sha256": "f6a5a0f56013eee446311bad8a4259480a8f45cbd20006a180de5b8d98ef6812",
               },
           }
 
