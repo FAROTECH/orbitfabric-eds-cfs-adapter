@@ -72,7 +72,7 @@
       "kind": "orbitfabric.projection_profile",
       "profile_version": "0.1-candidate",
       "reason": null,
-      "sha256": "5233b01315d60629cbb5adfee0821fdc1b2b8ae3f9a3ab93f8dfb8c8d19b536f",
+      "sha256": "0f63b9d496b9f7abffe6fb17f17c9f6217e1c538cc0146de6c6e4160334653b4",
       "status": "available",
       "version": "0.1.0"
     }
