@@ -25,7 +25,9 @@ from orbitfabric_eds_cfs_adapter.projection.model import (
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "fixtures" / "p0_b6" / "expected.xml"
-EXPECTED_SHA256 = "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+EXPECTED_SHA256 = "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
+COMMAND_TOPIC_REF = "CFE_MISSION/OF_DEMO_CMD_TOPICID"
+TELEMETRY_TOPIC_REF = "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
 
 
 def _model() -> EdsProjectionModel:
@@ -101,7 +103,7 @@ def _model() -> EdsProjectionModel:
                 interface_type="CFE_SB/Telecommand",
                 generic_type_name="TelecommandDataType",
                 generic_type_ref="CommandBase",
-                topic_id=160,
+                topic_ref=COMMAND_TOPIC_REF,
                 topic_variable="CMDTopicId",
             ),
             EdsInterface(
@@ -109,7 +111,7 @@ def _model() -> EdsProjectionModel:
                 interface_type="CFE_SB/Telemetry",
                 generic_type_name="TelemetryDataType",
                 generic_type_ref="PayloadStatusTlm",
-                topic_id=416,
+                topic_ref=TELEMETRY_TOPIC_REF,
                 topic_variable="STATUSTLMTopicId",
             ),
         ),
@@ -118,13 +120,13 @@ def _model() -> EdsProjectionModel:
                 name="CMDTopicId",
                 type_ref="BASE_TYPES/uint16",
                 read_only=True,
-                initial_value=160,
+                initial_value="${" + COMMAND_TOPIC_REF + "}",
             ),
             EdsVariable(
                 name="STATUSTLMTopicId",
                 type_ref="BASE_TYPES/uint16",
                 read_only=True,
-                initial_value=416,
+                initial_value="${" + TELEMETRY_TOPIC_REF + "}",
             ),
         ),
         parameter_maps=(
@@ -147,7 +149,7 @@ def test_serializer_matches_retained_golden_bytes() -> None:
     expected = GOLDEN.read_bytes()
 
     assert actual == expected
-    assert len(actual) == 2921
+    assert len(actual) == 2990
     assert hashlib.sha256(actual).hexdigest() == EXPECTED_SHA256
 
 
@@ -229,8 +231,8 @@ def test_b5_concepts_are_preserved_in_xml() -> None:
 
     variables = root.findall(".//eds:Variable", ns)
     assert [(item.attrib["name"], item.attrib["initialValue"]) for item in variables] == [
-        ("CMDTopicId", "160"),
-        ("STATUSTLMTopicId", "416"),
+        ("CMDTopicId", "${" + COMMAND_TOPIC_REF + "}"),
+        ("STATUSTLMTopicId", "${" + TELEMETRY_TOPIC_REF + "}"),
     ]
 
 

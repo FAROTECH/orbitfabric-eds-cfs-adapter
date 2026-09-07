@@ -69,7 +69,7 @@ class EdsInterface:
     interface_type: str
     generic_type_name: str
     generic_type_ref: str
-    topic_id: int
+    topic_ref: str
     topic_variable: str
 
 
@@ -78,7 +78,7 @@ class EdsVariable:
     name: str
     type_ref: str
     read_only: bool
-    initial_value: int
+    initial_value: str
 
 
 @dataclass(frozen=True)
@@ -203,6 +203,10 @@ def _argument_entries(
     return tuple(entries)
 
 
+def _mission_ref_expression(topic_ref: str) -> str:
+    return "${" + topic_ref + "}"
+
+
 def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
     """Build the deterministic B5 model from the accepted B4 resolved boundary."""
 
@@ -306,7 +310,7 @@ def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
         interface_type=COMMAND_INTERFACE_TYPE,
         generic_type_name=COMMAND_GENERIC_TYPE,
         generic_type_ref=COMMAND_BASE_NAME,
-        topic_id=resolved.command_interface.topic_id,
+        topic_ref=resolved.command_interface.topic_ref,
         topic_variable=command_topic_variable,
     )
     telemetry_interface = EdsInterface(
@@ -314,7 +318,7 @@ def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
         interface_type=TELEMETRY_INTERFACE_TYPE,
         generic_type_name=TELEMETRY_GENERIC_TYPE,
         generic_type_ref=telemetry_message_name,
-        topic_id=resolved.telemetry_interface.topic_id,
+        topic_ref=resolved.telemetry_interface.topic_ref,
         topic_variable=telemetry_topic_variable,
     )
 
@@ -323,13 +327,13 @@ def build_projection_model(resolved: ResolvedProfile) -> EdsProjectionModel:
             name=command_topic_variable,
             type_ref=TOPIC_ID_TYPE,
             read_only=True,
-            initial_value=resolved.command_interface.topic_id,
+            initial_value=_mission_ref_expression(resolved.command_interface.topic_ref),
         ),
         EdsVariable(
             name=telemetry_topic_variable,
             type_ref=TOPIC_ID_TYPE,
             read_only=True,
-            initial_value=resolved.telemetry_interface.topic_id,
+            initial_value=_mission_ref_expression(resolved.telemetry_interface.topic_ref),
         ),
     )
     parameter_maps = (

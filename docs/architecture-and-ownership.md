@@ -7,7 +7,8 @@ OrbitFabric Core Integration Input Set
     -> EDS-cFS Projection Profile
     -> adapter deterministic projection
     -> CCSDS EDS artifact
-    -> NASA EdsLib
+    -> selected cFS mission allocation identities
+    -> NASA EdsLib / MissionLib realization
     -> NASA cFS
 ```
 
@@ -24,21 +25,36 @@ The product is an OrbitFabric adapter. Its integration role is a standards-backe
 - Integration Package Manifest and Integration Result semantics;
 - Adapter Manager lifecycle semantics.
 
-### The EDS-cFS adapter owns
+### The EDS-cFS adapter and Projection Profile own
 
-- its target-specific Projection Profile schema;
+- the target-specific Projection Profile schema;
 - explicit OrbitFabric identity to EDS realization bindings;
+- binding cFS interfaces to mission-owned `CFE_MISSION` topic allocation identities;
 - deterministic EDS artifact generation;
 - faithful projection of supported Core command constraints into EDS;
 - adapter-side validation and traceability;
 - declared target compatibility and Integration Coverage;
 - evidence-backed statements about what the pinned target runtime does and does not enforce automatically.
 
-### The target realization owns
+The reusable Profile does not own concrete TopicId values.
 
-- EDS package/component naming;
-- cFS application/interface bindings;
-- Topic / Message ID realization;
+### The selected cFS mission owns
+
+- concrete TopicId allocations for the allocation identities required by the Profile;
+- mission-specific topic-space policy and registry definitions.
+
+The retained SampleMission values `160` and `416` are reference-mission evidence, not universal cFS rules.
+
+### MissionLib / cFE own
+
+- mission-specific TopicId / MsgId realization;
+- any custom target mapping policy selected by the mission.
+
+The adapter does not reimplement MissionLib mapping rules.
+
+### The remaining target realization owns
+
+- cFS application/interface realization;
 - Function Codes;
 - header references and other target-only wire choices;
 - executable command acceptance/rejection policy in the target application/runtime realization.
@@ -54,6 +70,20 @@ For the pinned P2-B proof path, an entry-level EDS `ValidRange` is retained in t
 Executable flight-software runtime behavior and native acceptance.
 
 The adapter does not inject a duplicate hard-coded flight policy merely because the selected runtime path does not automatically enforce a projected semantic constraint.
+
+## Target allocation boundary
+
+```text
+OrbitFabric semantic interface
+    -> Profile topic_ref
+    -> CFE_MISSION allocation identity
+    -> selected mission concrete TopicId
+    -> MissionLib / cFE realization
+```
+
+A missing required allocation must fail the selected native target proof. No fallback TopicId is invented by the adapter.
+
+See [target-allocation.md](target-allocation.md) for the concrete pre-v0.1 contract.
 
 ## Constraint boundary
 
@@ -87,10 +117,11 @@ This distinction is part of the Target Applicable Surface and must remain explic
 
 ```text
 OrbitFabric command ID != cFS Function Code
-OrbitFabric entity ID  != cFS Topic / Message ID
+OrbitFabric entity ID  != cFS topic allocation identity
+cFS topic allocation identity != universal numeric TopicId
 ```
 
-No target identifier is inferred into Core.
+No target identifier or allocation policy is inferred into Core.
 
 ## Architecture authority
 

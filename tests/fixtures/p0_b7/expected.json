@@ -5,7 +5,7 @@
     "kind": "ccsds.sois.eds.xml",
     "media_type": "application/xml",
     "package": "OF_DEMO",
-    "sha256": "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+    "sha256": "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
   },
   "integration": {
     "id": "orbitfabric-eds-cfs",
@@ -201,17 +201,17 @@
   "resolutions": [
     {
       "binding": "cmd.payload-enable",
-      "id": "resolution.commands.payload.enable.command_topic_id",
+      "id": "resolution.commands.payload.enable.command_topic_ref",
       "mapping": "mapping.commands.payload.enable",
       "origin": "profile",
-      "property": "cfs.command_topic_id",
+      "property": "cfs.command_topic_ref",
       "sources": [
         {
           "domain": "commands",
           "id": "payload.enable"
         }
       ],
-      "value": 160
+      "value": "CFE_MISSION/OF_DEMO_CMD_TOPICID"
     },
     {
       "binding": "cmd.payload-enable",
@@ -285,17 +285,17 @@
     },
     {
       "binding": "cmd.payload-set-period",
-      "id": "resolution.commands.payload.set_period.command_topic_id",
+      "id": "resolution.commands.payload.set_period.command_topic_ref",
       "mapping": "mapping.commands.payload.set_period",
       "origin": "profile",
-      "property": "cfs.command_topic_id",
+      "property": "cfs.command_topic_ref",
       "sources": [
         {
           "domain": "commands",
           "id": "payload.set_period"
         }
       ],
-      "value": 160
+      "value": "CFE_MISSION/OF_DEMO_CMD_TOPICID"
     },
     {
       "binding": "cmd.payload-set-period",
@@ -313,17 +313,17 @@
     },
     {
       "binding": "packet.payload-status",
-      "id": "resolution.packets.payload_status.telemetry_topic_id",
+      "id": "resolution.packets.payload_status.telemetry_topic_ref",
       "mapping": "mapping.packets.payload_status",
       "origin": "profile",
-      "property": "cfs.telemetry_topic_id",
+      "property": "cfs.telemetry_topic_ref",
       "sources": [
         {
           "domain": "packets",
           "id": "payload_status"
         }
       ],
-      "value": 416
+      "value": "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
     },
     {
       "binding": "packet.payload-status",

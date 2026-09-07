@@ -56,8 +56,8 @@
         </RequiredInterfaceSet>
         <Implementation>
           <VariableSet>
-            <Variable type="BASE_TYPES/uint16" readOnly="true" name="CMDTopicId" initialValue="160" />
-            <Variable type="BASE_TYPES/uint16" readOnly="true" name="STATUSTLMTopicId" initialValue="416" />
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="CMDTopicId" initialValue="${CFE_MISSION/OF_DEMO_CMD_TOPICID}" />
+            <Variable type="BASE_TYPES/uint16" readOnly="true" name="STATUSTLMTopicId" initialValue="${CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID}" />
           </VariableSet>
           <ParameterMapSet>
             <ParameterMap interface="CMD" parameter="TopicId" variableRef="CMDTopicId" />

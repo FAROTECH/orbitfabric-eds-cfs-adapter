@@ -10,6 +10,10 @@
       "minLength": 1,
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
     },
+    "topicRef": {
+      "type": "string",
+      "pattern": "^CFE_MISSION/[A-Za-z_][A-Za-z0-9_]*$"
+    },
     "coreSource": {
       "type": "object",
       "additionalProperties": false,
@@ -123,15 +127,13 @@
                 "name": {
                   "$ref": "#/$defs/targetName"
                 },
-                "topic_id": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 65535
+                "topic_ref": {
+                  "$ref": "#/$defs/topicRef"
                 }
               },
               "required": [
                 "name",
-                "topic_id"
+                "topic_ref"
               ]
             },
             "telemetry": {
@@ -141,15 +143,13 @@
                 "name": {
                   "$ref": "#/$defs/targetName"
                 },
-                "topic_id": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 65535
+                "topic_ref": {
+                  "$ref": "#/$defs/topicRef"
                 }
               },
               "required": [
                 "name",
-                "topic_id"
+                "topic_ref"
               ]
             }
           },

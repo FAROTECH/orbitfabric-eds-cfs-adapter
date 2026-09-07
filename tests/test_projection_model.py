@@ -21,6 +21,9 @@ from orbitfabric_eds_cfs_adapter.projection.resolution import (
     ResolvedTelemetryField,
 )
 
+COMMAND_TOPIC_REF = "CFE_MISSION/OF_DEMO_CMD_TOPICID"
+TELEMETRY_TOPIC_REF = "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
+
 
 def _resolved() -> ResolvedProfile:
     return ResolvedProfile(
@@ -28,8 +31,10 @@ def _resolved() -> ResolvedProfile:
         profile_version="0.1.0",
         package_name="OF_DEMO",
         component_name="Application",
-        command_interface=ResolvedInterface(name="CMD", topic_id=160),
-        telemetry_interface=ResolvedInterface(name="STATUS_TLM", topic_id=161),
+        command_interface=ResolvedInterface(name="CMD", topic_ref=COMMAND_TOPIC_REF),
+        telemetry_interface=ResolvedInterface(
+            name="STATUS_TLM", topic_ref=TELEMETRY_TOPIC_REF
+        ),
         commands=(
             ResolvedCommandBinding(
                 binding_id="cmd.payload-enable",
@@ -153,7 +158,7 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
             item.interface_type,
             item.generic_type_name,
             item.generic_type_ref,
-            item.topic_id,
+            item.topic_ref,
             item.topic_variable,
         )
         for item in model.interfaces
@@ -163,7 +168,7 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
             "CFE_SB/Telecommand",
             "TelecommandDataType",
             "CommandBase",
-            160,
+            COMMAND_TOPIC_REF,
             "CMDTopicId",
         ),
         (
@@ -171,7 +176,7 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
             "CFE_SB/Telemetry",
             "TelemetryDataType",
             "PayloadStatusTlm",
-            161,
+            TELEMETRY_TOPIC_REF,
             "STATUSTLMTopicId",
         ),
     ]
@@ -180,8 +185,13 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
         (item.name, item.type_ref, item.read_only, item.initial_value)
         for item in model.variables
     ] == [
-        ("CMDTopicId", "BASE_TYPES/uint16", True, 160),
-        ("STATUSTLMTopicId", "BASE_TYPES/uint16", True, 161),
+        ("CMDTopicId", "BASE_TYPES/uint16", True, "${" + COMMAND_TOPIC_REF + "}"),
+        (
+            "STATUSTLMTopicId",
+            "BASE_TYPES/uint16",
+            True,
+            "${" + TELEMETRY_TOPIC_REF + "}",
+        ),
     ]
     assert [
         (item.interface, item.parameter, item.variable_ref)
@@ -308,8 +318,8 @@ def test_topic_variable_collision_fails_closed() -> None:
     resolved = _resolved()
     collided = replace(
         resolved,
-        command_interface=ResolvedInterface(name="A_B", topic_id=160),
-        telemetry_interface=ResolvedInterface(name="AB", topic_id=161),
+        command_interface=ResolvedInterface(name="A_B", topic_ref=COMMAND_TOPIC_REF),
+        telemetry_interface=ResolvedInterface(name="AB", topic_ref=TELEMETRY_TOPIC_REF),
     )
 
     with pytest.raises(ProjectionModelError, match="TopicId variable name collision"):

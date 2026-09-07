@@ -80,7 +80,7 @@
       "format": "json-schema-2020-12",
       "path": "schemas/profile-0.1.schema.json",
       "schema_version": "0.1-candidate",
-      "sha256": "037c3bceb772616ee6772579d356076f04db2e141f7d64995727544afaae8599"
+      "sha256": "0460648ced7c2ddf729136df38c4c9d9bcae88c3a00fd8055b46e5896a3381c1"
     }
   ],
   "result_compatibility": {
