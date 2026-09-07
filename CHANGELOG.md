@@ -4,6 +4,18 @@ All notable product changes will be documented here.
 
 ## Unreleased
 
+### C2 public release readiness
+
+- rebaselined the product identity from `0.1.0.dev0` to release candidate `0.1.0` without changing projection semantics;
+- added one canonical Adapter Source Coordinate: `github.com/FAROTECH:orbitfabric/eds-cfs`;
+- bound release construction to the canonical product identity instead of caller-supplied authority/publisher/name values;
+- added deterministic Release Descriptor and Project Lock construction for the canonical adapter release;
+- added Project Lock lifecycle proof for `MISSING -> INSTALLED -> MATCH -> NOOP`, verify and removal;
+- added publisher-only release material that deliberately excludes consumer-owned Project Lock state;
+- added public Getting Started documentation and `v0.1.0` release notes;
+- added a tag-triggered draft-release workflow that downloads and verifies published bytes before making the GitHub Release public;
+- retained Catalog registration as a post-publication C2-B step so the Catalog digest can be taken from the actual published `adapter-release.json` bytes.
+
 ### C1 installed lifecycle readiness
 
 - added provider-neutral Release Descriptor construction for the adapter wheel;

@@ -2,13 +2,14 @@
 
 #include "cfe.h"
 #include "cfe_core_api_base_msgids.h"
+#include "cfe_mission_eds_designparameters.h"
 
 #include "of_demo_eds_dictionary.h"
 #include "of_demo_eds_dispatcher.h"
 #include "of_demo_eds_typedefs.h"
 
-#define OF_DEMO_APP_CMD_TOPIC_ID        160
-#define OF_DEMO_APP_STATUS_TLM_TOPIC_ID 416
+#define OF_DEMO_APP_CMD_TOPIC_ID        EdsParam_CFE_MISSION_OF_DEMO_CMD_TOPICID
+#define OF_DEMO_APP_STATUS_TLM_TOPIC_ID EdsParam_CFE_MISSION_OF_DEMO_STATUS_TLM_TOPICID
 #define OF_DEMO_APP_CMD_PIPE_DEPTH      8
 #define OF_DEMO_APP_CMD_PIPE_NAME       "OF_DEMO_CMD_PIPE"
 

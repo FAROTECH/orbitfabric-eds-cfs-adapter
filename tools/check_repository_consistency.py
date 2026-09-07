@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import runpy
 import tomllib
 from pathlib import Path
 
@@ -10,15 +11,7 @@ PACKAGE = ROOT / "src" / "orbitfabric_eds_cfs_adapter"
 MANIFEST = PACKAGE / "integration_package.json"
 SCHEMA = PACKAGE / "schemas" / "profile-0.1.schema.json"
 TRACEABILITY_SCHEMA = PACKAGE / "schemas" / "traceability-0.1.schema.json"
-
-EXPECTED = {
-    "distribution": "orbitfabric-eds-cfs-adapter",
-    "version": "0.1.0.dev0",
-    "console": "orbitfabric-eds-cfs",
-    "adapter_id": "orbitfabric-eds-cfs",
-    "integration_id": "orbitfabric-eds-cfs",
-    "operation": "eds_cfs_projection",
-}
+CONSTANTS = PACKAGE / "constants.py"
 
 EXPECTED_CORE_COMPATIBILITY = {
     "input_set_versions": ["0.1-candidate"],
@@ -53,30 +46,49 @@ def _fail(message: str) -> None:
 
 
 def main() -> int:
+    identity = runpy.run_path(str(CONSTANTS))
+    expected = {
+        "distribution": identity["DISTRIBUTION_NAME"],
+        "version": identity["VERSION"],
+        "console": identity["CONSOLE_COMMAND"],
+        "adapter_id": identity["ADAPTER_ID"],
+        "integration_id": identity["INTEGRATION_ID"],
+        "operation": identity["OPERATION_ID"],
+        "python_package": identity["PYTHON_PACKAGE"],
+        "source_coordinate": identity["SOURCE_COORDINATE"],
+    }
+
+    if expected["source_coordinate"] != {
+        "authority": "github.com/FAROTECH",
+        "publisher": "orbitfabric",
+        "name": "eds-cfs",
+    }:
+        _fail("Canonical Adapter Source Coordinate mismatch")
+
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     project = pyproject["project"]
     scripts = project["scripts"]
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
 
-    if project["name"] != EXPECTED["distribution"]:
+    if project["name"] != expected["distribution"]:
         _fail("Distribution identity mismatch")
-    if project["version"] != EXPECTED["version"]:
+    if project["version"] != expected["version"]:
         _fail("Distribution version mismatch")
-    if scripts.get(EXPECTED["console"]) != "orbitfabric_eds_cfs_adapter.cli:main":
+    if scripts.get(expected["console"]) != f"{expected['python_package']}.cli:main":
         _fail("Console script identity mismatch")
     if manifest["adapter"] != {
-        "id": EXPECTED["adapter_id"],
-        "version": EXPECTED["version"],
+        "id": expected["adapter_id"],
+        "version": expected["version"],
     }:
         _fail("Manifest adapter identity mismatch")
-    if manifest["integration"]["id"] != EXPECTED["integration_id"]:
+    if manifest["integration"]["id"] != expected["integration_id"]:
         _fail("Manifest integration identity mismatch")
     if manifest["execution"] != {
-        "argv_prefix": [EXPECTED["console"]],
+        "argv_prefix": [expected["console"]],
         "protocol": "orbitfabric.adapter_cli.v1",
     }:
         _fail("Execution protocol identity mismatch")
-    if [item["id"] for item in manifest["operations"]] != [EXPECTED["operation"]]:
+    if [item["id"] for item in manifest["operations"]] != [expected["operation"]]:
         _fail("Operation identity mismatch")
 
     manifests = list((ROOT / "src").rglob("integration_package.json"))

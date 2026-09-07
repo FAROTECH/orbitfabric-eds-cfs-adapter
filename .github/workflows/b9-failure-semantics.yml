@@ -154,8 +154,6 @@ jobs:
                   "profile": "unavailable",
                   "schema": None,
                   "coverage": "unavailable",
-                  "size": 2472,
-                  "sha256": "62549d9a7aff558677d057fb0a46c0dd1c002a912fd836a4a66ab3f51fd78a13",
               },
               "b3": {
                   "phase": "profile_schema",
@@ -165,8 +163,6 @@ jobs:
                   "profile": "unavailable",
                   "schema": None,
                   "coverage": "unavailable",
-                  "size": 2376,
-                  "sha256": "5f57622b9c6d20484b3bb07e4f509775961cee2040ca605610d6d228bdb375eb",
               },
               "b4": {
                   "phase": "source_resolution",
@@ -176,8 +172,6 @@ jobs:
                   "profile": "available",
                   "schema": "0.1-candidate",
                   "coverage": "unavailable",
-                  "size": 2579,
-                  "sha256": "17d48138ee63504e2cc5368397fd07dbc92ea09fdd8a530c1ad0e61b743b9ddd",
               },
               "b5": {
                   "phase": "projection_validation",
@@ -187,8 +181,6 @@ jobs:
                   "profile": "available",
                   "schema": "0.1-candidate",
                   "coverage": "complete",
-                  "size": 4570,
-                  "sha256": "f6a5a0f56013eee446311bad8a4259480a8f45cbd20006a180de5b8d98ef6812",
               },
           }
 
@@ -212,11 +204,13 @@ jobs:
                   f"{hashlib.sha256(data).hexdigest()}"
               )
               assert data == (golden_root / f"{layer}.json").read_bytes()
-              assert len(data) == contract["size"]
-              assert hashlib.sha256(data).hexdigest() == contract["sha256"]
 
               result = json.loads(data)
               assert result["result"] == "failed"
+              assert result["adapter"] == {
+                  "id": "orbitfabric-eds-cfs",
+                  "version": "0.1.0",
+              }
               assert result["integration"]["schema_version"] == contract["schema"]
               assert result["inputs"]["core_input_set"]["status"] == contract["core"]
               assert result["mission"]["status"] == contract["mission"]

@@ -6,13 +6,13 @@ Conformance is responsibility- and contract-based, not file-for-file similarity.
 
 | Adapter Developer Template responsibility | EDS-cFS repository home |
 |---|---|
-| identity | `pyproject.toml`, `integration_package.json`, README |
+| identity | `constants.py`, `pyproject.toml`, `integration_package.json`, README |
 | packaging | `pyproject.toml`, packaged manifest/schema |
 | integration contract | manifest, `cli.py`, `result.py`, contract tests |
 | projection | Profile schema and `projection/` |
 | implementation | `src/orbitfabric_eds_cfs_adapter/` |
-| conformance | `tests/`, CI, native controls, installed lifecycle proof |
-| evidence | Integration Result, traceability, native proof artifacts, lifecycle evidence |
+| conformance | `tests/`, CI, native controls, installed lifecycle, release proof |
+| evidence | Integration Result, traceability, native proof artifacts, lifecycle/release evidence |
 | developer experience | README, `docs/`, CONTRIBUTING |
 | automation | `.github/workflows/`, `.github/scripts/`, `tools/` |
 
@@ -32,20 +32,20 @@ C0 proves bootstrap conformity:
 
 ## C1
 
-C1 is the repository-readiness gate after P3 and Target Allocation Readiness.
+C1 is complete, promoted and main-revalidated.
 
-It requires:
+It proves:
 
 - native cFS/EdsLib acceptance on the exact pinned lane;
 - complete machine-readable traceability for the retained proof slice;
 - evidence-backed Integration Coverage;
-- installed lifecycle proof through the OrbitFabric Adapter Manager.
+- installed lifecycle through OrbitFabric Adapter Manager.
 
 The installed lifecycle control deliberately proves more than importability:
 
 ```text
 build wheel
-    -> provider-neutral Release Descriptor
+    -> canonical Release Descriptor
     -> Adapter Manager install
     -> managed-environment verification
     -> delete source checkout package + wheel + acquisition wheelhouse
@@ -56,26 +56,61 @@ build wheel
     -> empty final inventory
 ```
 
-The installed execution therefore must remain independent of `src/` from the repository checkout.
-
-The retained projection output must still match the accepted deterministic product bytes:
-
-```text
-B6 EDS XML
-B7 traceability
-B8 Integration Result
-```
-
-C1 does not prove release publication, Project Lock consumption or published-byte acquisition. Those remain C2 responsibilities.
+The installed execution must remain independent of `src/` from the repository checkout.
 
 ## C2
 
-C2 is evaluated before public `v0.1.0` and adds:
+C2 is the public-productization gate for `v0.1.0`.
 
-- release construction;
-- Project Lock proof;
-- published-byte controls;
-- public documentation review;
-- Catalog identity coherence.
+It is intentionally split into two ordered stages.
+
+### C2-A: release-ready source
+
+C2-A must be complete before a public tag is created.
+
+It requires:
+
+- one canonical Adapter Source Coordinate owned by the product;
+- source/package/manifest version coherence at `0.1.0`;
+- deterministic Release Descriptor construction;
+- deterministic Project Lock construction;
+- Project Lock lifecycle proof:
+
+```text
+MISSING
+    -> INSTALLED
+    -> MATCH
+    -> repeated install NOOP
+    -> verify PASS
+    -> remove
+    -> empty inventory
+```
+
+- publisher-only release construction containing the wheel, `adapter-release.json` and `SHA256SUMS` but not a Project Lock;
+- public Getting Started documentation;
+- `v0.1.0` release notes;
+- a tag-triggered GitHub Release workflow that creates a draft, downloads the release assets back from GitHub, verifies the published bytes, and only then publishes the release;
+- full P0/P1/P2/P3/C1 regression on one final source HEAD.
+
+The canonical Source Coordinate is:
+
+```text
+github.com/FAROTECH:orbitfabric/eds-cfs
+```
+
+### C2-B: published product and Catalog consumer proof
+
+C2-B starts only after the verified `v0.1.0` GitHub Release exists.
+
+It requires:
+
+- exact published `adapter-release.json` digest;
+- canonical Adapter Catalog entry for `eds-cfs` `0.1.0`;
+- GitHub Release source binding for `FAROTECH/orbitfabric-eds-cfs-adapter`;
+- exact consumer Project Lock fixture;
+- Catalog validation;
+- Catalog product-consumer E2E against the actual published release bytes.
+
+The Catalog must never be populated from a locally reconstructed descriptor digest when published release bytes already exist.
 
 Core contract semantics always take precedence over this repository and over the Adapter Developer Template.

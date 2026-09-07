@@ -41,9 +41,6 @@ test -f "$core_input/integration_input_manifest.json"
 
 python tools/build_release_bundle.py \
   --wheel "$wheel" \
-  --authority github.com/FAROTECH \
-  --publisher orbitfabric \
-  --name eds-cfs \
   --output-dir "$release_dir" \
   --release-only
 
@@ -65,7 +62,7 @@ assert payload["source_coordinate"] == {
     "publisher": "orbitfabric",
     "name": "eds-cfs",
 }
-assert payload["release_version"] == "0.1.0.dev0"
+assert payload["release_version"] == "0.1.0"
 assert len(payload["artifacts"]) == 1
 assert payload["artifacts"][0]["artifact_type"] == "python-wheel"
 PY
@@ -164,20 +161,24 @@ assert actual_files == expected_files
 result = json.loads((output / "integration_result.json").read_text(encoding="utf-8"))
 assert result["result"] == "succeeded"
 assert result["operation"] == {"id": "eds_cfs_projection"}
-assert result["adapter"] == {"id": "orbitfabric-eds-cfs", "version": "0.1.0.dev0"}
+assert result["adapter"] == {"id": "orbitfabric-eds-cfs", "version": "0.1.0"}
 assert result["inputs"]["operation_inputs"] == []
 assert result["inputs"]["profile"]["sha256"] == hashlib.sha256(
     (reference / "profile.yaml").read_bytes()
 ).hexdigest()
 
 expected_digests = {
-    "eds/mission.xml": "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb",
-    "traceability.json": "3480f57f0461839ec66b62ded192be2aac71f2446b5baa869e82f410256a20f8",
-    "integration_result.json": "38705931d3c89b16522c94ff180dcaa349ded32f8d51cab04d2b85389a274322",
+    "eds/mission.xml": hashlib.sha256((reference / "expected.xml").read_bytes()).hexdigest(),
+    "traceability.json": hashlib.sha256(
+        (reference / "expected-traceability.json").read_bytes()
+    ).hexdigest(),
+    "integration_result.json": hashlib.sha256(
+        (reference / "expected-result.json").read_bytes()
+    ).hexdigest(),
 }
 for relative, expected in expected_digests.items():
     actual = hashlib.sha256((output / relative).read_bytes()).hexdigest()
-    assert actual == expected, (relative, actual)
+    assert actual == expected, (relative, actual, expected)
 
 print("C1 installed lifecycle projection bytes: PASS")
 PY
@@ -210,4 +211,4 @@ printf '%s\n' \
   "installed execution independent of checkout src/: PASS" \
   "B6 installed bytes match retained golden: PASS" \
   "B7 installed bytes match retained golden: PASS" \
-  "B8 installed bytes match retained golden: PASS"
+  "B8 installed bytes match retained release golden: PASS"

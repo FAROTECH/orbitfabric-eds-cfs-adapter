@@ -1,126 +1,311 @@
 # OrbitFabric EDS-cFS Adapter
 
-OrbitFabric adapter bridging mission contracts through a CCSDS EDS realization into the NASA cFS / EdsLib integration lane.
+`orbitfabric-eds-cfs-adapter` projects OrbitFabric mission contracts into CCSDS Electronic Data Sheets and carries that contract into the native NASA EdsLib / cFS integration lane.
 
-## Status
+The adapter is deliberately a bridge, not a replacement for cFS mission architecture. OrbitFabric owns mission-level semantics, the Projection Profile owns explicit target binding, the selected cFS mission owns concrete topic allocation, and EdsLib / MissionLib / cFE remain authoritative for native realization and runtime behavior.
+
+> **Release line:** `0.1.0`. Release identity is established by the immutable `v0.1.0` tag and verified GitHub Release assets. A branch checkout is not a release substitute.
+
+## Choose your path
+
+### I want to use the adapter
+
+Use the published release through **OrbitFabric Adapter Manager**.
 
 ```text
-maturity         experimental / pre-release
-P0               complete: deterministic OF -> EDS projection + traceability + native EdsLib validation
-P1               complete: pinned native_eds build/install with fixed cFS consumer
-P2               complete: generated runtime command/telemetry proof + constraint characterization
-P3               complete: negative/conformance runtime behavior characterized on frozen lane
-target allocation complete: Profile binds mission-owned symbolic CFE_MISSION TopicId allocations
-C1 readiness      installed lifecycle proof present; full final-head acceptance required before promotion
-public release    none yet
+OrbitFabric Core
+    -> published adapter release
+    -> Adapter Manager install
+    -> verify
+    -> execute eds_cfs_projection
+    -> CCSDS EDS + traceability + Integration Result
 ```
 
-This repository is intentionally clean-bootstrapped rather than created from `orbitfabric-adapter-template`. That choice does not define a different adapter contract: the implementation remains conformant with OrbitFabric Core contracts and with the responsibility/readiness model defined by the OrbitFabric Adapter Developer Template.
+A normal consumer should not need an editable source install, locally rebuilt wheel or publisher tooling.
+
+Start with **[Getting Started](docs/getting-started.md)**.
+
+### I want to try the integration
+
+Start with the **[Reference Project: OrbitFabric Contract to Native cFS Runtime](examples/cfs/of_demo_app/README.md)**.
+
+It demonstrates the complete architectural boundary exercised by this adapter:
+
+```text
+OrbitFabric mission semantics
+    -> Core Integration Input Set
+    -> EDS-cFS Projection Profile
+    -> generated CCSDS EDS
+    -> mission-owned CFE_MISSION topic allocation
+    -> EdsLib generated types and dispatcher
+    -> fixed cFS application
+    -> native build and runtime evidence
+```
+
+The reference cFS application does not carry a parallel hand-written message contract. Its command handlers use generated OF_DEMO types and dispatch, and its command/telemetry TopicIds come from the selected mission's generated EDS design parameters.
+
+The same retained slice is used to prove native build dependency, runtime command/telemetry flow, typed argument delivery, target allocation ownership and negative conformance behavior.
+
+### I want to understand the integration boundary
+
+Read:
+
+- **[Architecture and Ownership](docs/architecture-and-ownership.md)**
+- **[Target Allocation](docs/target-allocation.md)**
+- **[Integration Coverage](coverage/integration-coverage.md)**
+
+These documents separate what OrbitFabric means, what the adapter projects, what the selected cFS mission owns and what the native NASA runtime actually proves.
+
+### I want to develop or contribute
+
+Clone the repository and use the contributor surface.
+
+The direct console command:
+
+```text
+orbitfabric-eds-cfs
+```
+
+is primarily a development surface. Normal consumers should execute the installed adapter through OrbitFabric Adapter Manager.
+
+Start with **[Development](docs/development.md)** and [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## What the adapter does
+
+The `0.1.0` product line consumes the public OrbitFabric Core Integration Input Set and supports one deliberately narrow operation:
+
+```text
+eds_cfs_projection
+```
+
+For the retained product slice it projects:
+
+```text
+OrbitFabric commands
+OrbitFabric telemetry
+OrbitFabric packet membership
+command argument constraints represented by EDS
+explicit command Function Code bindings
+mission-owned cFS topic allocation identities
+```
+
+Representative output is:
+
+```text
+eds/mission.xml
+traceability.json
+integration_result.json
+```
+
+The generated EDS is the interoperability boundary. The adapter does not bypass it with a hidden direct OrbitFabric-to-cFS inference path.
 
 ## Integration topology
 
 ```text
 OrbitFabric Mission Model
-    -> Core Integration Input Set
-    -> EDS-cFS Projection Profile
-    -> OrbitFabric EDS-cFS Adapter
-    -> CCSDS EDS
-    -> NASA EdsLib
-    -> NASA cFS native EDS-enabled build/runtime
+        |
+        v
+OrbitFabric Core
+Integration Input Set
+        |
+        + EDS-cFS Projection Profile
+        |
+        v
+OrbitFabric EDS-cFS Adapter
+        |
+        v
+CCSDS EDS
+        |
+        v
+NASA EdsLib
+        |
+        + selected cFS mission allocation
+        + MissionLib / cFE realization
+        |
+        v
+NASA cFS native build/runtime
 ```
 
-The EDS artifact is an explicit interoperability boundary. It must not be bypassed by hidden direct cFS inference.
-
-## Target allocation ownership
-
-The public pre-v0.1 Profile does not own absolute cFS TopicId numbers.
-
-Instead it binds OrbitFabric-facing interfaces to mission-owned symbolic allocation identities, for example:
+The ownership rule is:
 
 ```text
-CFE_MISSION/OF_DEMO_CMD_TOPICID
-CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID
+OrbitFabric owns mission semantics.
+The adapter owns explicit projection and traceability.
+The cFS mission owns concrete target allocation.
+NASA target tooling owns native realization and runtime behavior.
+Evidence preserves the boundary between them.
 ```
 
-The selected cFS mission owns the concrete TopicId allocation and MissionLib/cFE mission realization owns the target-specific TopicId-to-MsgId mapping.
+## Mission-owned target allocation
 
-The pinned SampleMission proof still resolves the accepted reference values:
+The reusable Projection Profile does not contain universal absolute cFS TopicId values.
+
+Instead it binds interfaces to mission-owned allocation identities:
+
+```yaml
+interfaces:
+  command:
+    name: CMD
+    topic_ref: CFE_MISSION/OF_DEMO_CMD_TOPICID
+  telemetry:
+    name: STATUS_TLM
+    topic_ref: CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID
+```
+
+The generated EDS carries those native design-parameter references. The selected mission defines their concrete values, and MissionLib / cFE performs the mission-specific TopicId to MsgId realization.
+
+For the retained SampleMission lane the two identities resolve to `160` and `416`. Those values are reference-mission evidence, not adapter policy.
+
+The reference application consumes the same mission-owned values through `cfe_mission_eds_designparameters.h`; it does not duplicate them as local numeric constants.
+
+See **[Target Allocation](docs/target-allocation.md)**.
+
+## Reference Project
+
+The repository contains a fixed cFS application under:
 
 ```text
-OF_DEMO_CMD_TOPICID        -> 160
-OF_DEMO_STATUS_TLM_TOPICID -> 416
+examples/cfs/of_demo_app
 ```
 
-Those numbers are reference-mission evidence, not generic adapter policy. Native selected-mission processing remains the final target validity authority, and missing required mission symbols fail the native acceptance proof.
+Its purpose is not to demonstrate that OrbitFabric generates a cFS application. It demonstrates the opposite boundary:
 
-## Proven scope
+> A normal cFS application can remain application-owned while consuming interfaces generated from an OrbitFabric-derived EDS contract.
 
-The current retained proof slice covers:
+The application source depends on generated OF_DEMO types and dispatcher APIs. Native proof harnesses stage the exact retained EDS artifact into a disposable pinned cFS mission and require the application to compile, link, install and run against that generated interface.
+
+Read **[Reference Project: OrbitFabric Contract to Native cFS Runtime](examples/cfs/of_demo_app/README.md)**.
+
+## Evidence model
+
+The release line is backed by independent proof layers rather than one aggregate test:
 
 ```text
-commands
-telemetry
-packet membership
-command_sequence / expected_outputs traceability
-native build/install dependency
-runtime command/telemetry closed loop
-runtime conformance characterization
-mission-owned symbolic target allocation binding
+P0  deterministic projection + native EdsLib acceptance
+P1  complete native_eds build/install dependency
+P2  generated API + native command/telemetry runtime loop
+P3  negative/conformance runtime characterization
+     +
+mission-owned target allocation proof
+     +
+installed Adapter Manager lifecycle
+     +
+release and Project Lock proof
+     +
+published-byte verification
 ```
+
+### P0: standards-backed projection
 
 P0 proves deterministic EDS XML, machine-readable traceability, Core-conformant Integration Results, deterministic failure semantics and native EdsLib processing against exact pinned upstream refs.
 
-P1 proves that a fixed product-owned cFS application can consume interfaces generated from the retained OF_DEMO EDS and be compiled, linked, installed and staged through the pinned `native_eds` mission build.
+### P1: real cFS build dependency
 
-P2 proves the retained EDS-backed runtime lane:
+P1 proves that the fixed reference application consumes generated OF_DEMO EDS interfaces and participates in the complete pinned `native_eds` build/install path.
+
+A negative dependency control removes the staged OF_DEMO EDS and requires the native consumer build to fail.
+
+### P2: runtime behavior
+
+The nominal closed loop is:
 
 ```text
 payload.enable
     -> EDS-enabled cmd_send
     -> cFS / ci_lab
+    -> Software Bus
     -> generated OF_DEMO dispatcher
-    -> fixed application handler
+    -> fixed typed handler
     -> PayloadStatusTlm
     -> to_lab
     -> EDS-enabled tlm_recv
     -> PayloadEnabled=true
 ```
 
-P2 also characterizes projected `ValidRange` metadata versus runtime behavior: the pinned lane delivers both in-range and out-of-range `PeriodMs` values to the typed handler, so this adapter does not claim automatic runtime enforcement of every projected range constraint.
+P2 also proves typed delivery of `payload.set_period(period_ms)` and explicitly characterizes EDS `ValidRange` metadata versus observed runtime enforcement.
 
-P3 pressure-tests the same frozen runtime lane with a structurally valid OF_DEMO command carrying undefined Function Code 127. The observed lane dispatches that command to the valid generated `payload.enable` typed handler. A dedicated evidence-only EdsLib intervention preserves known derived commands and a genuinely non-derived NASA SAMPLE_APP command while making the unmatched-derived case fail closed.
+### P3: conformance characterization
 
-P3 therefore closes as a characterization, not as a claim of automatic unknown-command rejection. No adapter-local Function Code guard, Core change or Projection Profile workaround is introduced.
+P3 sends a structurally valid OF_DEMO command with undefined Function Code `127` through the frozen lane. The observed native path dispatches it to the valid generated `payload.enable` typed handler.
 
-C1 adds an installed-product lifecycle proof through OrbitFabric Adapter Manager. The proof installs the built wheel into a managed environment, removes the checkout package source and acquisition material, verifies the installed state, executes `eds_cfs_projection` through the installed adapter, and requires the resulting B6/B7/B8 bytes to match the retained accepted golden artifacts exactly.
+The adapter therefore records the actual target behavior instead of adding a local Function Code guard merely to manufacture automatic rejection.
 
-See [coverage/integration-coverage.md](coverage/integration-coverage.md) for the exact claim boundaries.
+The same discipline is used for range constraints: projection of a semantic constraint into EDS is not claimed to be equivalent to automatic runtime enforcement unless the selected target path proves it.
 
-No generic/full CCSDS EDS interoperability claim, generic OrbitFabric ACK realization, or complete cFS integration coverage is made yet.
+## Validated target lane
 
-## Architecture authority
+| System | Validated baseline |
+| --- | --- |
+| OrbitFabric Core | `v1.3.0`, `a25917e81c90396df2b189834e83cf852fa4da5f` |
+| NASA cFS | `v7.0.1`, `088b2fa828db9ff7e00733f1908e0eeb59f66ce3` |
+| NASA EdsLib | `v7.0.1`, `2acc963b34f77692c6396555dcfb10ef43eb1046` |
+| NASA cFE | `c5fb2b4d540bd55eb6c3707da7dd13eee679d4dd` |
 
-Cross-repository architecture, hypotheses, evidence, falsification and sequencing are maintained in the private OrbitFabric Architecture Lab.
+Additional cFS applications and command-line tools used by the native proofs are pinned by exact commit in their harnesses. NASA source code is not vendored in this repository.
 
-This repository owns only the adapter implementation, local product tests, proof harnesses and product evidence. If implementation evidence suggests a Core contract change, ownership change, different integration topology or broader interoperability claim, the finding returns to Architecture Lab before product scope is changed.
+No broader cFS, EdsLib or generic/full CCSDS EDS compatibility range is claimed by `0.1.0`.
 
-## Frozen upstream baseline
+## Integration Coverage
+
+Integration Coverage records how the analyzed OrbitFabric semantic surface is represented toward this target and where the selected target runtime does not provide the semantics that a stronger claim would require.
+
+It distinguishes faithful projection from runtime enforcement and distinguishes adapter responsibility from mission-owned target realization.
+
+See **[Integration Coverage](coverage/integration-coverage.md)**.
+
+## Installed and release lifecycle
+
+The adapter is verified through OrbitFabric Adapter Manager after the checkout package source, built wheel and acquisition wheelhouse are removed. Installed execution must reproduce the retained EDS, traceability and Integration Result bytes exactly.
+
+The `v0.1.0` release workflow publishes only:
 
 ```text
-NASA cFS
-    088b2fa828db9ff7e00733f1908e0eeb59f66ce3
-
-NASA EdsLib
-    2acc963b34f77692c6396555dcfb10ef43eb1046
-
-NASA cFE
-    c5fb2b4d540bd55eb6c3707da7dd13eee679d4dd
+orbitfabric_eds_cfs_adapter-0.1.0-py3-none-any.whl
+adapter-release.json
+SHA256SUMS
 ```
 
-Additional cFS sample applications and command-line tools used by native proofs are also pinned by exact commit in the corresponding CI harnesses.
+A Project Lock is consumer-owned project state and is not a publisher release asset.
 
-NASA sources are not vendored into this repository.
+The release workflow creates a draft GitHub Release, downloads the actual uploaded bytes back from GitHub, verifies them, and only then makes the release public.
 
-## Development
+## Product identity
 
-See [docs/development.md](docs/development.md) for local checks and native-proof notes, [docs/architecture-and-ownership.md](docs/architecture-and-ownership.md) for ownership boundaries, [docs/repository-conformance.md](docs/repository-conformance.md) for readiness checkpoints, and [coverage/integration-coverage.md](coverage/integration-coverage.md) for the evidence-backed coverage disposition.
+```text
+repository / distribution  orbitfabric-eds-cfs-adapter
+Python package              orbitfabric_eds_cfs_adapter
+console command             orbitfabric-eds-cfs
+adapter / integration id    orbitfabric-eds-cfs
+operation                   eds_cfs_projection
+source coordinate           github.com/FAROTECH:orbitfabric/eds-cfs
+version                     0.1.0
+```
+
+## Documentation
+
+### User
+
+- [Getting Started](docs/getting-started.md)
+- [Reference Project](examples/cfs/of_demo_app/README.md)
+- [Target Allocation](docs/target-allocation.md)
+- [Integration Coverage](coverage/integration-coverage.md)
+
+### Developer / Contributor
+
+- [Development](docs/development.md)
+- [Architecture and Ownership](docs/architecture-and-ownership.md)
+- [Core Input Consumption](docs/core-input-consumption.md)
+- [Repository Conformance](docs/repository-conformance.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### Release
+
+- [0.1.0 Release Notes](docs/releases/0.1.0.md)
+
+## Project relationships
+
+NASA cFS, cFE and EdsLib are independent upstream projects. This repository is an independent OrbitFabric integration and does not imply endorsement by NASA or the upstream projects.
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).
