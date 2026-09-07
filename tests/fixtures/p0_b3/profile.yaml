@@ -17,10 +17,10 @@ settings:
   interfaces:
     command:
       name: CMD
-      topic_id: 160
+      topic_ref: CFE_MISSION/OF_DEMO_CMD_TOPICID
     telemetry:
       name: STATUS_TLM
-      topic_id: 416
+      topic_ref: CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID
 
 bindings:
   - id: cmd.payload-enable
