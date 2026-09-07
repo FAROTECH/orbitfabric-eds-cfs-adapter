@@ -1,6 +1,6 @@
 # Integration Coverage
 
-Status: **P2 PROVEN / P3 CONFORMANCE CHARACTERIZED**
+Status: **P2 PROVEN / P3 CONFORMANCE CHARACTERIZED / TARGET ALLOCATION REVALIDATED**
 
 This document records only coverage established by retained evidence. Repository presence or upstream cFS/EDS capability must not be interpreted as broader OrbitFabric coverage.
 
@@ -15,7 +15,8 @@ This document records only coverage established by retained evidence. Repository
 | command sequence | applicable as source traceability | retained in mapping/evidence boundary; no cFS runtime sequence engine claimed | TRACEABILITY_ONLY |
 | expected outputs | applicable as source traceability | retained in mapping/evidence boundary; generic ACK semantics not claimed | TRACEABILITY_ONLY |
 | relationships | narrowly applicable | `packet_includes_telemetry` is the only consumed relationship family | P0_PROVEN |
-| native EDS processing | applicable | exact retained B6 processed by pinned EdsLib/cFS lane | P0_PROVEN |
+| target TopicId allocation binding | applicable | Profile binds interfaces to mission-owned `CFE_MISSION/<symbol>` references; selected mission owns concrete TopicId values | TARGET_ALLOCATION_PROVEN |
+| native EDS processing | applicable | exact retained B6 processed by pinned EdsLib/cFS lane with selected-mission symbols | P0_PROVEN / TARGET_REVALIDATED |
 | complete native cFS build/install | applicable | fixed `of_demo_app` consumes generated OF_DEMO interfaces | P1_PROVEN |
 | runtime command dispatch | applicable | `payload.enable` and typed `payload.set_period(PeriodMs)` reach generated OF_DEMO dispatch/handlers | P2_PROVEN |
 | runtime telemetry encode/decode | applicable | `PayloadStatusTlm` is transmitted and EDS-decoded with `PayloadEnabled=true` | P2_PROVEN |
@@ -76,6 +77,35 @@ genuinely non-derived SAMPLE_APP/SEND_HK
 
 This control supports the derived-dispatch fallback mechanism as the relevant causal boundary. It is not product code, does not modify the adapter, and does not by itself establish whether upstream semantics are intended or defective.
 
+## Target allocation ownership
+
+The original numeric Profile candidate exposed an ownership defect during P2: a syntactically valid telemetry TopicId could still be invalid for the selected cFS mission.
+
+The accepted public pre-v0.1 contract therefore uses symbolic mission allocation bindings:
+
+```text
+Projection Profile
+    command topic_ref   -> CFE_MISSION/OF_DEMO_CMD_TOPICID
+    telemetry topic_ref -> CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID
+
+selected cFS mission
+    owns concrete TopicId values
+
+MissionLib / cFE mission realization
+    owns target-specific TopicId -> MsgId realization
+```
+
+For the pinned SampleMission reference lane the mission resolves:
+
+```text
+OF_DEMO_CMD_TOPICID        -> 160
+OF_DEMO_STATUS_TLM_TOPICID -> 416
+```
+
+Those values are not generic adapter allocation policy.
+
+The full adapter matrix was revalidated after the symbolic rebaseline. Missing required mission symbols are also exercised as a native fail-closed control. Projection success alone is therefore not claimed as proof that an arbitrary selected cFS mission can realize the interface.
+
 ## Constraint projection versus enforcement
 
 For the current proof slice:
@@ -113,6 +143,12 @@ The adapter therefore does not claim automatic unknown-FC rejection on the froze
 
 Executable command acceptance policy remains part of the target runtime/application realization unless a target-native generic validation mechanism is separately selected and proven.
 
+## Installed lifecycle boundary
+
+C1 adds a product lifecycle control through OrbitFabric Adapter Manager. The built wheel must be installable into the managed backend, remain verifiable after acquisition material and checkout package source are removed, execute `eds_cfs_projection` from the installed environment, and reproduce the exact retained B6/B7/B8 bytes.
+
+This is repository/product readiness evidence. It does not expand semantic integration coverage.
+
 ## Rule
 
-Coverage is expanded only from concrete target evidence. A reusable/versioned public adapter release still requires Target Allocation Readiness and the later repository/release readiness gates.
+Coverage is expanded only from concrete target evidence. Target Allocation Readiness is resolved for the current public pre-v0.1 contract. Public release still requires the repository C1 acceptance and subsequent C2/P4 release-readiness gates.
