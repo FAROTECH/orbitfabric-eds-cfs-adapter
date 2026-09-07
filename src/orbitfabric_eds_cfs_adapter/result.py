@@ -5,6 +5,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from orbitfabric_eds_cfs_adapter.constants import (
+    ADAPTER_ID,
+    INTEGRATION_ID,
+    OPERATION_ID,
+    VERSION,
+)
 from orbitfabric_eds_cfs_adapter.coverage import (
     build_coverage,
     build_failed_coverage,
@@ -20,10 +26,7 @@ RESULT_KIND = "orbitfabric.integration_result"
 RESULT_VERSION = "0.2-candidate"
 RESULT_STATE = "succeeded"
 FAILED_RESULT_STATE = "failed"
-INTEGRATION_ID = "orbitfabric-eds-cfs"
-ADAPTER_ID = "orbitfabric-eds-cfs"
-ADAPTER_VERSION = "0.1.0.dev0"
-OPERATION_ID = "eds_cfs_projection"
+ADAPTER_VERSION = VERSION
 EDS_RELATIVE_PATH = Path("eds/mission.xml")
 TRACEABILITY_RELATIVE_PATH = Path("traceability.json")
 RESULT_RELATIVE_PATH = Path("integration_result.json")
