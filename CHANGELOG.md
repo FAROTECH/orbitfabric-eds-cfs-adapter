@@ -4,6 +4,26 @@ All notable product changes will be documented here.
 
 ## Unreleased
 
+### C1 installed lifecycle readiness
+
+- added provider-neutral Release Descriptor construction for the adapter wheel;
+- added an OrbitFabric Adapter Manager installed-lifecycle proof;
+- proved install and managed-environment verification independently of the checkout package source;
+- removed wheel, acquisition wheelhouse and repository `src/` before installed execution;
+- executed `eds_cfs_projection` through the installed adapter instance;
+- required installed B6 EDS XML, B7 traceability and B8 Integration Result bytes to match the retained accepted goldens exactly;
+- retained Project Lock and published-byte release controls for the later C2 gate.
+
+### Mission-owned symbolic target allocation
+
+- replaced Profile-authored numeric cFS TopicIds with mission-owned symbolic `CFE_MISSION/<symbol>` bindings;
+- projected symbolic references through native EDS design-parameter syntax;
+- retained selected cFS mission ownership of concrete TopicId values and MissionLib ownership of target-specific TopicId-to-MsgId realization;
+- retained the pinned SampleMission reference allocations `160` and `416` only as mission fixture evidence;
+- added a native fail-closed control for missing mission allocation symbols;
+- revalidated CI, B8, B9, B10, P1, P2 and P3 on the promoted symbolic allocation product;
+- added no OrbitFabric TopicId registry, automatic allocator, hardcoded SampleMission universal range policy or MissionLib reimplementation.
+
 ### P3 negative/conformance characterization complete
 
 - added a dedicated unknown Function Code runtime falsification on the frozen EDS-cFS lane;
@@ -11,7 +31,7 @@ All notable product changes will be documented here.
 - added NASA sample_app and EdsLib derived-dispatch controls;
 - added an evidence-only EdsLib intervention that fails closed for an unmatched derived selector while preserving FC 0, FC 1 and a genuinely non-derived NASA command;
 - closed P3 as an evidence-backed characterization rather than claiming automatic unknown-command rejection;
-- added no adapter-local Function Code guard and made no Core or Projection Profile change.
+- added no adapter-local Function Code guard and made no Core semantic change.
 
 ### P2 runtime proof complete
 
