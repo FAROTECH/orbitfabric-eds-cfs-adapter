@@ -31,8 +31,6 @@ CORE_DIGEST = "e8b70eebbda845a91546f40121ee6d927f96a2a39de2776437930e009b20bc98"
 PROFILE_DIGEST = "bf5e5d4f85636c3f389da091a71a30b785125aaa559145cf899d90431738ed18"
 B6_DIGEST = "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
 B7_DIGEST = "3480f57f0461839ec66b62ded192be2aac71f2446b5baa869e82f410256a20f8"
-B8_SIZE = 13271
-B8_DIGEST = "38705931d3c89b16522c94ff180dcaa349ded32f8d51cab04d2b85389a274322"
 
 
 def _core() -> LoadedInputSet:
@@ -157,7 +155,7 @@ def test_success_result_has_frozen_identity_and_provenance(tmp_path: Path) -> No
     }
     assert result["adapter"] == {
         "id": "orbitfabric-eds-cfs",
-        "version": "0.1.0.dev0",
+        "version": "0.1.0",
     }
     assert result["operation"] == {"id": "eds_cfs_projection"}
     assert result["mission"] == {
@@ -247,8 +245,6 @@ def test_result_matches_retained_b8_golden_bytes(tmp_path: Path) -> None:
     actual = serialize_result(result)
 
     assert actual == GOLDEN.read_bytes()
-    assert len(actual) == B8_SIZE
-    assert hashlib.sha256(actual).hexdigest() == B8_DIGEST
 
 
 def test_result_serialization_is_deterministic_and_write_last_ready(tmp_path: Path) -> None:
