@@ -283,8 +283,8 @@ def test_b3_negative_matrix_fails_at_profile_schema(tmp_path: Path) -> None:
     cases.append(("missing-function-code", missing_function_code))
 
     missing_topic = deepcopy(base)
-    missing_topic["settings"]["interfaces"]["command"].pop("topic_id")
-    cases.append(("missing-topic-id", missing_topic))
+    missing_topic["settings"]["interfaces"]["command"].pop("topic_ref")
+    cases.append(("missing-topic-ref", missing_topic))
 
     invalid_name = deepcopy(base)
     invalid_name["settings"]["eds"]["package_name"] = "OF-DEMO"
@@ -319,8 +319,10 @@ def test_b4_negative_matrix_fails_at_source_resolution(tmp_path: Path) -> None:
     cases.append(("function-code-collision", function_collision))
 
     topic_collision = deepcopy(base)
-    topic_collision["settings"]["interfaces"]["telemetry"]["topic_id"] = 160
-    cases.append(("topic-id-collision", topic_collision))
+    topic_collision["settings"]["interfaces"]["telemetry"]["topic_ref"] = (
+        base["settings"]["interfaces"]["command"]["topic_ref"]
+    )
+    cases.append(("topic-ref-collision", topic_collision))
 
     unknown_source = deepcopy(base)
     unknown_source["bindings"][0]["sources"][0]["id"] = "payload.unknown"
