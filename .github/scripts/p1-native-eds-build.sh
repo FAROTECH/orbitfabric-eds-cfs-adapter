@@ -5,8 +5,8 @@ CFS_COMMIT="088b2fa828db9ff7e00733f1908e0eeb59f66ce3"
 EDSLIB_COMMIT="2acc963b34f77692c6396555dcfb10ef43eb1046"
 CFE_COMMIT="c5fb2b4d540bd55eb6c3707da7dd13eee679d4dd"
 SAMPLE_APP_COMMIT="2f93d1a4159a02b18d67ee83342c9e96b90e23e4"
-B6_SHA256="e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
-B8_SHA256="0cd845a656d8a04ffc118e9feae71ecbff848982d2b6e39f19bdf36d05b20310"
+B6_SHA256="afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
+B8_SHA256="38705931d3c89b16522c94ff180dcaa349ded32f8d51cab04d2b85389a274322"
 
 ADAPTER_ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
 RUN_ROOT="${RUNNER_TEMP:-/tmp}"
@@ -18,6 +18,7 @@ BUILD_DIR="${CFS_DIR}/build-native_eds"
 B6_SOURCE="${ADAPTER_ROOT}/tests/fixtures/p0_b6/expected.xml"
 B8_GOLDEN="${ADAPTER_ROOT}/tests/fixtures/p0_b8/expected.json"
 APP_SOURCE="${ADAPTER_ROOT}/examples/cfs/of_demo_app"
+ALLOCATION_SCRIPT="${ADAPTER_ROOT}/.github/scripts/stage-reference-topic-allocations.sh"
 STAGED_EDS="${APP_DIR}/eds/of_demo.xml"
 SOURCE_LIST="${BUILD_DIR}/edstool-sources-SampleMission.mk"
 
@@ -75,6 +76,9 @@ git -C "$CFS_DIR" submodule update --init --recursive
 [[ "$(git -C "$CFS_DIR/cfe" rev-parse HEAD)" == "$CFE_COMMIT" ]]
 [[ "$(git -C "$CFS_DIR/apps/sample_app" rev-parse HEAD)" == "$SAMPLE_APP_COMMIT" ]]
 
+bash "$ALLOCATION_SCRIPT" "$CFS_DIR"
+cp "$CFS_DIR/sample_defs/eds/cfe-topicids.xml" "$EVIDENCE_DIR/cfe-topicids.with-of-demo.xml"
+
 cat > "$EVIDENCE_DIR/baseline.txt" <<EOF
 cfs=$CFS_COMMIT
 edslib=$EDSLIB_COMMIT
@@ -82,6 +86,8 @@ cfe=$CFE_COMMIT
 sample_app=$SAMPLE_APP_COMMIT
 b6_sha256=$B6_SHA256
 b8_sha256=$B8_SHA256
+command_topic_ref=CFE_MISSION/OF_DEMO_CMD_TOPICID
+telemetry_topic_ref=CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID
 EOF
 
 printf '%s\n' "Preparing fixed external of_demo_app consumer"
@@ -112,9 +118,6 @@ printf '%s\n' "Compiling complete native_eds mission"
 run_positive_goal native_eds.compile positive-compile.log
 require_file "$BUILD_DIR/stamp.compile" "native_eds compile stamp"
 
-# cFS native_* is a composed build and may emit multiple compile databases.
-# Require the external application source to appear in at least one of them;
-# do not assume the top-level compile_commands.json aggregates nested app builds.
 find "$BUILD_DIR" -type f -name 'compile_commands.json' -print | sort \
   > "$EVIDENCE_DIR/compile-db-candidates.txt"
 if [[ ! -s "$EVIDENCE_DIR/compile-db-candidates.txt" ]]; then
