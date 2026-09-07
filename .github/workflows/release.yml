@@ -1,0 +1,159 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build
+
+      - name: Validate tag and canonical source version
+        id: version
+        shell: bash
+        run: |
+          python - <<'PY' | tee /tmp/release-version.env
+          import runpy
+          import tomllib
+          from pathlib import Path
+
+          project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          project_version = project["project"]["version"]
+          identity = runpy.run_path("src/orbitfabric_eds_cfs_adapter/constants.py")
+          assert project_version == identity["VERSION"]
+          print(f"VERSION={project_version}")
+          PY
+          source /tmp/release-version.env
+          test "$GITHUB_REF_NAME" = "v$VERSION"
+          test -f "docs/releases/$VERSION.md"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build wheel
+        run: python -m build --wheel
+
+      - name: Build publisher release material
+        shell: bash
+        run: |
+          wheel="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          test -n "$wheel"
+          python tools/build_release_bundle.py \
+            --wheel "$wheel" \
+            --release-only \
+            --output-dir generated/release
+
+      - name: Verify local release material
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          wheel="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          cp "$wheel" generated/release/
+          (
+            cd generated/release
+            sha256sum -c SHA256SUMS
+          )
+          PYTHONPATH=src RELEASE_VERSION="$version" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from orbitfabric_eds_cfs_adapter.constants import SOURCE_COORDINATE, VERSION
+
+          descriptor = json.loads(
+              Path("generated/release/adapter-release.json").read_text(encoding="utf-8")
+          )
+          assert os.environ["RELEASE_VERSION"] == VERSION
+          assert descriptor["release_version"] == VERSION
+          assert descriptor["source_coordinate"] == SOURCE_COORDINATE
+          assert len(descriptor["artifacts"]) == 1
+          assert descriptor["artifacts"][0]["artifact_type"] == "python-wheel"
+          assert not Path("generated/release/adapter-project-lock.json").exists()
+          PY
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          wheel="$(find generated/release -maxdepth 1 -name '*.whl' -print -quit)"
+          gh release create "$GITHUB_REF_NAME" \
+            "$wheel" \
+            generated/release/adapter-release.json \
+            generated/release/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --draft \
+            --title "OrbitFabric EDS-cFS Adapter $version" \
+            --notes-file "docs/releases/$version.md"
+
+      - name: Download published bytes from draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          rm -rf /tmp/orbitfabric-eds-cfs-published
+          mkdir -p /tmp/orbitfabric-eds-cfs-published
+          gh release download "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir /tmp/orbitfabric-eds-cfs-published
+
+      - name: Verify published bytes
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          (
+            cd /tmp/orbitfabric-eds-cfs-published
+            sha256sum -c SHA256SUMS
+          )
+          PYTHONPATH=src RELEASE_VERSION="$version" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from orbitfabric_eds_cfs_adapter.constants import SOURCE_COORDINATE, VERSION
+
+          root = Path("/tmp/orbitfabric-eds-cfs-published")
+          descriptor = json.loads((root / "adapter-release.json").read_text(encoding="utf-8"))
+          assert os.environ["RELEASE_VERSION"] == VERSION
+          assert descriptor["release_version"] == VERSION
+          assert descriptor["source_coordinate"] == SOURCE_COORDINATE
+          artifact = descriptor["artifacts"][0]
+          wheel = root / artifact["filename"]
+          assert wheel.is_file()
+          assert wheel.stat().st_size == artifact["size"]
+          assert not (root / "adapter-project-lock.json").exists()
+          PY
+
+      - name: Upload publication verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbitfabric-eds-cfs-${{ steps.version.outputs.version }}-published-byte-proof
+          path: /tmp/orbitfabric-eds-cfs-published
+          if-no-files-found: error
+
+      - name: Publish verified GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
