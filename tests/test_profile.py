@@ -32,7 +32,12 @@ def test_real_p0_profile_is_valid() -> None:
         "package_name": "OF_DEMO",
         "component_name": "Application",
     }
-    assert profile["settings"]["interfaces"]["command"]["topic_id"] == 160
+    assert profile["settings"]["interfaces"]["command"]["topic_ref"] == (
+        "CFE_MISSION/OF_DEMO_CMD_TOPICID"
+    )
+    assert profile["settings"]["interfaces"]["telemetry"]["topic_ref"] == (
+        "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
+    )
     assert profile["bindings"][0]["config"]["function_code"] == 0
     assert profile["bindings"][2]["config"]["fields"][0]["source"] == {
         "domain": "telemetry",
@@ -64,9 +69,31 @@ def test_invalid_target_name_is_rejected(tmp_path: Path) -> None:
         load_profile(_write(tmp_path, profile))
 
 
-def test_topic_id_must_fit_uint16(tmp_path: Path) -> None:
+def test_topic_ref_must_use_cfe_mission_namespace(tmp_path: Path) -> None:
     profile = _load_valid()
-    profile["settings"]["interfaces"]["telemetry"]["topic_id"] = 65536
+    profile["settings"]["interfaces"]["telemetry"]["topic_ref"] = (
+        "OTHER/OF_DEMO_STATUS_TLM_TOPICID"
+    )
+
+    with pytest.raises(ValidationError):
+        load_profile(_write(tmp_path, profile))
+
+
+def test_topic_ref_symbol_must_be_target_safe(tmp_path: Path) -> None:
+    profile = _load_valid()
+    profile["settings"]["interfaces"]["telemetry"]["topic_ref"] = (
+        "CFE_MISSION/OF-DEMO-STATUS"
+    )
+
+    with pytest.raises(ValidationError):
+        load_profile(_write(tmp_path, profile))
+
+
+def test_numeric_topic_id_is_not_a_public_profile_mode(tmp_path: Path) -> None:
+    profile = _load_valid()
+    interface = profile["settings"]["interfaces"]["telemetry"]
+    interface.pop("topic_ref")
+    interface["topic_id"] = 416
 
     with pytest.raises(ValidationError):
         load_profile(_write(tmp_path, profile))
