@@ -13,7 +13,7 @@ class ResolutionError(ValueError):
 @dataclass(frozen=True)
 class ResolvedInterface:
     name: str
-    topic_id: int
+    topic_ref: str
 
 
 @dataclass(frozen=True)
@@ -161,16 +161,17 @@ def resolve_profile(profile: dict[str, Any], core: LoadedInputSet) -> ResolvedPr
     interfaces = settings["interfaces"]
     command_interface = ResolvedInterface(
         name=interfaces["command"]["name"],
-        topic_id=interfaces["command"]["topic_id"],
+        topic_ref=interfaces["command"]["topic_ref"],
     )
     telemetry_interface = ResolvedInterface(
         name=interfaces["telemetry"]["name"],
-        topic_id=interfaces["telemetry"]["topic_id"],
+        topic_ref=interfaces["telemetry"]["topic_ref"],
     )
 
-    if command_interface.topic_id == telemetry_interface.topic_id:
+    if command_interface.topic_ref == telemetry_interface.topic_ref:
         raise ResolutionError(
-            f"Topic ID collision: {command_interface.topic_id} is used by both interfaces"
+            "Topic reference collision: "
+            f"{command_interface.topic_ref} is used by both interfaces"
         )
 
     binding_ids: set[str] = set()
