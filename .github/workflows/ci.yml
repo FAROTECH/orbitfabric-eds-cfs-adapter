@@ -184,13 +184,13 @@ jobs:
 
           assert resolved.package_name == "OF_DEMO"
           assert resolved.component_name == "Application"
-          assert (resolved.command_interface.name, resolved.command_interface.topic_id) == (
+          assert (resolved.command_interface.name, resolved.command_interface.topic_ref) == (
               "CMD",
-              160,
+              "CFE_MISSION/OF_DEMO_CMD_TOPICID",
           )
-          assert (resolved.telemetry_interface.name, resolved.telemetry_interface.topic_id) == (
+          assert (resolved.telemetry_interface.name, resolved.telemetry_interface.topic_ref) == (
               "STATUS_TLM",
-              416,
+              "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID",
           )
           assert [(item.source_id, item.function_code) for item in resolved.commands] == [
               ("payload.enable", 0),
@@ -258,13 +258,13 @@ jobs:
               BOOLEAN8_TYPE,
               "BASE_TYPES/uint32",
           ]
-          assert [(item.name, item.topic_id) for item in model.interfaces] == [
-              ("CMD", 160),
-              ("STATUS_TLM", 416),
+          assert [(item.name, item.topic_ref) for item in model.interfaces] == [
+              ("CMD", "CFE_MISSION/OF_DEMO_CMD_TOPICID"),
+              ("STATUS_TLM", "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"),
           ]
           assert [(item.name, item.initial_value) for item in model.variables] == [
-              ("CMDTopicId", 160),
-              ("STATUSTLMTopicId", 416),
+              ("CMDTopicId", "${CFE_MISSION/OF_DEMO_CMD_TOPICID}"),
+              ("STATUSTLMTopicId", "${CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID}"),
           ]
 
           print("B5 real internal projection model: PASS")
@@ -291,9 +291,9 @@ jobs:
           expected = Path("tests/fixtures/p0_b6/expected.xml").read_bytes()
 
           assert actual == expected
-          assert len(actual) == 2921
+          assert len(actual) == 2990
           assert hashlib.sha256(actual).hexdigest() == (
-              "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+              "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
           )
           parsed = ET.fromstring(actual)
           assert parsed.tag == "{http://www.ccsds.org/schema/sois/seds}PackageFile"
@@ -332,12 +332,12 @@ jobs:
 
           validate_traceability(traceability)
           assert actual == expected
-          assert len(actual) == 9186
+          assert len(actual) == 9289
           assert hashlib.sha256(actual).hexdigest() == (
-              "78f8bde50ba4a154547191e5ccee5b246b8d17e1cfd8cbb7ff37ba3b5f86064f"
+              "3480f57f0461839ec66b62ded192be2aac71f2446b5baa869e82f410256a20f8"
           )
           assert traceability["artifact"]["sha256"] == (
-              "e068223bd996321a46a9a276ed7cb64c215d04d11fccb1cf416eaf5225ad887b"
+              "afac1000713f6fdb0b15cdf71641b40c346c29fcf63ab074a934b6b7dfb969bb"
           )
           mapped_sources = {
               (source["domain"], source["id"])
