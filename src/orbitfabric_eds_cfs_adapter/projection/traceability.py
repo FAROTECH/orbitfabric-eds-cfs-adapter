@@ -20,6 +20,7 @@ from orbitfabric_eds_cfs_adapter.projection.model import (
     EdsInterface,
     EdsProjectionModel,
     EdsVariable,
+    eds_design_parameter_expression,
     eds_name_v1,
 )
 from orbitfabric_eds_cfs_adapter.projection.resolution import (
@@ -176,7 +177,7 @@ def _resolution(
 
 def _verify_interface(
     resolved_name: str,
-    resolved_topic_id: int,
+    resolved_topic_ref: str,
     expected_type: str,
     expected_generic_name: str,
     model: EdsProjectionModel,
@@ -192,16 +193,17 @@ def _verify_interface(
             f"B5 generic type name mismatch for {resolved_name}: "
             f"{interface.generic_type_name!r} != {expected_generic_name!r}"
         )
-    if interface.topic_id != resolved_topic_id:
+    if interface.topic_ref != resolved_topic_ref:
         raise TraceabilityError(
-            f"B4/B5 Topic ID mismatch for {resolved_name}: "
-            f"{resolved_topic_id} != {interface.topic_id}"
+            f"B4/B5 Topic reference mismatch for {resolved_name}: "
+            f"{resolved_topic_ref!r} != {interface.topic_ref!r}"
         )
     variable = _variable(model, interface.topic_variable)
-    if variable.initial_value != resolved_topic_id:
+    expected_expression = eds_design_parameter_expression(resolved_topic_ref)
+    if variable.initial_value != expected_expression:
         raise TraceabilityError(
             f"B5 TopicId variable mismatch for {resolved_name}: "
-            f"{variable.initial_value} != {resolved_topic_id}"
+            f"{variable.initial_value!r} != {expected_expression!r}"
         )
     return interface, variable
 
@@ -327,7 +329,7 @@ def build_traceability(
 
     command_interface, command_topic_variable = _verify_interface(
         resolved.command_interface.name,
-        resolved.command_interface.topic_id,
+        resolved.command_interface.topic_ref,
         COMMAND_INTERFACE_TYPE,
         COMMAND_GENERIC_TYPE,
         model,
@@ -339,7 +341,7 @@ def build_traceability(
 
     telemetry_interface, telemetry_topic_variable = _verify_interface(
         resolved.telemetry_interface.name,
-        resolved.telemetry_interface.topic_id,
+        resolved.telemetry_interface.topic_ref,
         TELEMETRY_INTERFACE_TYPE,
         TELEMETRY_GENERIC_TYPE,
         model,
@@ -441,12 +443,12 @@ def build_traceability(
                     "profile",
                 ),
                 _resolution(
-                    f"resolution.commands.{command.source_id}.command_topic_id",
+                    f"resolution.commands.{command.source_id}.command_topic_ref",
                     mapping_id,
                     command.binding_id,
                     source,
-                    "cfs.command_topic_id",
-                    command_interface.topic_id,
+                    "cfs.command_topic_ref",
+                    command_interface.topic_ref,
                     "profile",
                 ),
             ]
@@ -484,12 +486,12 @@ def build_traceability(
     )
     resolutions.append(
         _resolution(
-            f"resolution.packets.{packet.source_id}.telemetry_topic_id",
+            f"resolution.packets.{packet.source_id}.telemetry_topic_ref",
             packet_mapping_id,
             packet.binding_id,
             packet_source,
-            "cfs.telemetry_topic_id",
-            telemetry_interface.topic_id,
+            "cfs.telemetry_topic_ref",
+            telemetry_interface.topic_ref,
             "profile",
         )
     )
