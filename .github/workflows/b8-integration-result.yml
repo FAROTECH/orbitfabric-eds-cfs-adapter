@@ -82,6 +82,7 @@ jobs:
           assert result["kind"] == "orbitfabric.integration_result"
           assert result["result_version"] == "0.2-candidate"
           assert result["result"] == "succeeded"
+          assert result["adapter"] == {"id": "orbitfabric-eds-cfs", "version": "0.1.0"}
           assert result["operation"] == {"id": "eds_cfs_projection"}
           assert result["inputs"]["operation_inputs"] == []
           assert result["inputs"]["core_input_set"]["sha256"] == (
@@ -155,10 +156,7 @@ jobs:
 
           result_bytes = result_path.read_bytes()
           assert result_bytes == golden_path.read_bytes()
-          assert len(result_bytes) == 13271
-          assert hashlib.sha256(result_bytes).hexdigest() == (
-              "38705931d3c89b16522c94ff180dcaa349ded32f8d51cab04d2b85389a274322"
-          )
+          print("B8 result SHA-256:", hashlib.sha256(result_bytes).hexdigest())
           print("B8 Core-conformant Integration Result: PASS")
           PY
 
