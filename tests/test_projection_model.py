@@ -10,6 +10,7 @@ from orbitfabric_eds_cfs_adapter.projection.model import (
     EdsValidRange,
     ProjectionModelError,
     build_projection_model,
+    eds_design_parameter_expression,
     eds_name_v1,
 )
 from orbitfabric_eds_cfs_adapter.projection.resolution import (
@@ -21,6 +22,9 @@ from orbitfabric_eds_cfs_adapter.projection.resolution import (
     ResolvedTelemetryField,
 )
 
+CMD_TOPIC_REF = "CFE_MISSION/OF_DEMO_CMD_TOPICID"
+STATUS_TOPIC_REF = "CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID"
+
 
 def _resolved() -> ResolvedProfile:
     return ResolvedProfile(
@@ -28,8 +32,8 @@ def _resolved() -> ResolvedProfile:
         profile_version="0.1.0",
         package_name="OF_DEMO",
         component_name="Application",
-        command_interface=ResolvedInterface(name="CMD", topic_id=160),
-        telemetry_interface=ResolvedInterface(name="STATUS_TLM", topic_id=161),
+        command_interface=ResolvedInterface(name="CMD", topic_ref=CMD_TOPIC_REF),
+        telemetry_interface=ResolvedInterface(name="STATUS_TLM", topic_ref=STATUS_TOPIC_REF),
         commands=(
             ResolvedCommandBinding(
                 binding_id="cmd.payload-enable",
@@ -93,6 +97,15 @@ def test_boolean8_realization_is_frozen_adapter_policy() -> None:
     assert BOOLEAN8_SIZE_BITS == 8
 
 
+def test_mission_topic_ref_expression_is_frozen() -> None:
+    assert eds_design_parameter_expression(CMD_TOPIC_REF) == (
+        "${CFE_MISSION/OF_DEMO_CMD_TOPICID}"
+    )
+
+    with pytest.raises(ProjectionModelError, match="invalid cFS mission TopicId reference"):
+        eds_design_parameter_expression("OTHER/OF_DEMO_CMD_TOPICID")
+
+
 def test_frozen_slice_builds_expected_b5_model() -> None:
     model = build_projection_model(_resolved())
 
@@ -153,7 +166,7 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
             item.interface_type,
             item.generic_type_name,
             item.generic_type_ref,
-            item.topic_id,
+            item.topic_ref,
             item.topic_variable,
         )
         for item in model.interfaces
@@ -163,7 +176,7 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
             "CFE_SB/Telecommand",
             "TelecommandDataType",
             "CommandBase",
-            160,
+            CMD_TOPIC_REF,
             "CMDTopicId",
         ),
         (
@@ -171,7 +184,7 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
             "CFE_SB/Telemetry",
             "TelemetryDataType",
             "PayloadStatusTlm",
-            161,
+            STATUS_TOPIC_REF,
             "STATUSTLMTopicId",
         ),
     ]
@@ -180,8 +193,18 @@ def test_frozen_slice_builds_expected_b5_model() -> None:
         (item.name, item.type_ref, item.read_only, item.initial_value)
         for item in model.variables
     ] == [
-        ("CMDTopicId", "BASE_TYPES/uint16", True, 160),
-        ("STATUSTLMTopicId", "BASE_TYPES/uint16", True, 161),
+        (
+            "CMDTopicId",
+            "BASE_TYPES/uint16",
+            True,
+            "${CFE_MISSION/OF_DEMO_CMD_TOPICID}",
+        ),
+        (
+            "STATUSTLMTopicId",
+            "BASE_TYPES/uint16",
+            True,
+            "${CFE_MISSION/OF_DEMO_STATUS_TLM_TOPICID}",
+        ),
     ]
     assert [
         (item.interface, item.parameter, item.variable_ref)
@@ -308,8 +331,8 @@ def test_topic_variable_collision_fails_closed() -> None:
     resolved = _resolved()
     collided = replace(
         resolved,
-        command_interface=ResolvedInterface(name="A_B", topic_id=160),
-        telemetry_interface=ResolvedInterface(name="AB", topic_id=161),
+        command_interface=ResolvedInterface(name="A_B", topic_ref=CMD_TOPIC_REF),
+        telemetry_interface=ResolvedInterface(name="AB", topic_ref=STATUS_TOPIC_REF),
     )
 
     with pytest.raises(ProjectionModelError, match="TopicId variable name collision"):
