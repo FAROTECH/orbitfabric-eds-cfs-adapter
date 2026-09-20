@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+env:
+  ORBITFABRIC_CORE_REPOSITORY: FAROTECH/orbitfabric
+  ORBITFABRIC_CORE_REF: a25917e81c90396df2b189834e83cf852fa4da5f
+
 jobs:
   installed-lifecycle:
     runs-on: ubuntu-latest
@@ -17,8 +21,8 @@ jobs:
       - name: Checkout exact OrbitFabric Core 1.3.0 baseline
         uses: actions/checkout@v4
         with:
-          repository: FAROTECH/orbitfabric
-          ref: a25917e81c90396df2b189834e83cf852fa4da5f
+          repository: ${{ env.ORBITFABRIC_CORE_REPOSITORY }}
+          ref: ${{ env.ORBITFABRIC_CORE_REF }}
           path: _orbitfabric_core
 
       - name: Set up Python
