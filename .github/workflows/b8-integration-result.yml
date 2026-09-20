@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+env:
+  ORBITFABRIC_CORE_REPOSITORY: FAROTECH/orbitfabric
+  ORBITFABRIC_CORE_REF: a25917e81c90396df2b189834e83cf852fa4da5f
+
 jobs:
   b8-integration-result:
     runs-on: ubuntu-latest
@@ -21,7 +25,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
-          python -m pip install "orbitfabric @ git+https://github.com/FAROTECH/orbitfabric.git@a25917e81c90396df2b189834e83cf852fa4da5f"
+          python -m pip install "orbitfabric @ git+https://github.com/${ORBITFABRIC_CORE_REPOSITORY}.git@${ORBITFABRIC_CORE_REF}"
 
       - name: Materialize deterministic P0 mission workspace
         run: |
