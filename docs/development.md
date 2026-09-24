@@ -7,7 +7,7 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
-python -m pip install "orbitfabric @ git+https://github.com/FAROTECH/orbitfabric.git@a25917e81c90396df2b189834e83cf852fa4da5f"
+python -m pip install "orbitfabric @ git+https://github.com/OrbitFabric/orbitfabric.git@a25917e81c90396df2b189834e83cf852fa4da5f"
 
 ruff check .
 python tools/check_repository_consistency.py

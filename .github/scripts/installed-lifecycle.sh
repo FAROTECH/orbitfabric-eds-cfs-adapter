@@ -58,11 +58,11 @@ from pathlib import Path
 payload = json.loads(Path(os.environ["DESCRIPTOR"]).read_text(encoding="utf-8"))
 assert payload["kind"] == "orbitfabric.adapter_release"
 assert payload["source_coordinate"] == {
-    "authority": "github.com/FAROTECH",
+    "authority": "github.com/OrbitFabric",
     "publisher": "orbitfabric",
     "name": "eds-cfs",
 }
-assert payload["release_version"] == "0.1.0"
+assert payload["release_version"] == "0.1.1"
 assert len(payload["artifacts"]) == 1
 assert payload["artifacts"][0]["artifact_type"] == "python-wheel"
 PY
@@ -161,7 +161,7 @@ assert actual_files == expected_files
 result = json.loads((output / "integration_result.json").read_text(encoding="utf-8"))
 assert result["result"] == "succeeded"
 assert result["operation"] == {"id": "eds_cfs_projection"}
-assert result["adapter"] == {"id": "orbitfabric-eds-cfs", "version": "0.1.0"}
+assert result["adapter"] == {"id": "orbitfabric-eds-cfs", "version": "0.1.1"}
 assert result["inputs"]["operation_inputs"] == []
 assert result["inputs"]["profile"]["sha256"] == hashlib.sha256(
     (reference / "profile.yaml").read_bytes()

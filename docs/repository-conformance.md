@@ -95,7 +95,7 @@ MISSING
 The canonical Source Coordinate is:
 
 ```text
-github.com/FAROTECH:orbitfabric/eds-cfs
+github.com/OrbitFabric:orbitfabric/eds-cfs
 ```
 
 ### C2-B: published product and Catalog consumer proof
@@ -106,7 +106,7 @@ It requires:
 
 - exact published `adapter-release.json` digest;
 - canonical Adapter Catalog entry for `eds-cfs` `0.1.0`;
-- GitHub Release source binding for `FAROTECH/orbitfabric-eds-cfs-adapter`;
+- GitHub Release source binding for `OrbitFabric/orbitfabric-eds-cfs-adapter`;
 - exact consumer Project Lock fixture;
 - Catalog validation;
 - Catalog product-consumer E2E against the actual published release bytes.

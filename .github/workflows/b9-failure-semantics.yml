@@ -207,13 +207,17 @@ jobs:
                   f"B9 {layer.upper()} failed Result sha256: "
                   f"{hashlib.sha256(data).hexdigest()}"
               )
-              assert data == (golden_root / f"{layer}.json").read_bytes()
+              from orbitfabric_eds_cfs_adapter.result import serialize_result
+              historical = json.loads((golden_root / f"{layer}.json").read_bytes())
+              assert historical["adapter"]["version"] == "0.1.0"
+              historical["adapter"]["version"] = "0.1.1"
+              assert data == serialize_result(historical)
 
               result = json.loads(data)
               assert result["result"] == "failed"
               assert result["adapter"] == {
                   "id": "orbitfabric-eds-cfs",
-                  "version": "0.1.0",
+                  "version": "0.1.1",
               }
               assert result["integration"]["schema_version"] == contract["schema"]
               assert result["inputs"]["core_input_set"]["status"] == contract["core"]

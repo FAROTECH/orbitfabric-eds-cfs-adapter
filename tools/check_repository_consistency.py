@@ -59,7 +59,7 @@ def main() -> int:
     }
 
     if expected["source_coordinate"] != {
-        "authority": "github.com/FAROTECH",
+        "authority": "github.com/OrbitFabric",
         "publisher": "orbitfabric",
         "name": "eds-cfs",
     }:

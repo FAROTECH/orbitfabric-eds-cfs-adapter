@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -155,7 +156,7 @@ def test_success_result_has_frozen_identity_and_provenance(tmp_path: Path) -> No
     }
     assert result["adapter"] == {
         "id": "orbitfabric-eds-cfs",
-        "version": "0.1.0",
+        "version": "0.1.1",
     }
     assert result["operation"] == {"id": "eds_cfs_projection"}
     assert result["mission"] == {
@@ -244,7 +245,10 @@ def test_result_matches_retained_b8_golden_bytes(tmp_path: Path) -> None:
     *_prefix, result = _bundle(tmp_path)
     actual = serialize_result(result)
 
-    assert actual == GOLDEN.read_bytes()
+    historical = json.loads(GOLDEN.read_bytes())
+    assert historical["adapter"]["version"] == "0.1.0"
+    historical["adapter"]["version"] = "0.1.1"
+    assert actual == serialize_result(historical)
 
 
 def test_result_serialization_is_deterministic_and_write_last_ready(tmp_path: Path) -> None:
@@ -258,4 +262,8 @@ def test_result_serialization_is_deterministic_and_write_last_ready(tmp_path: Pa
 
     path = write_result(output_dir, result, traceability)
     assert path.name == "integration_result.json"
-    assert path.read_bytes() == first == GOLDEN.read_bytes()
+    assert path.read_bytes() == first
+    # Retained B8 bytes are historical; only the current adapter version changes.
+    historical = json.loads(GOLDEN.read_bytes())
+    historical["adapter"]["version"] = "0.1.1"
+    assert first == serialize_result(historical)

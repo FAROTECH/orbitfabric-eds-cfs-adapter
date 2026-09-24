@@ -1,5 +1,7 @@
 # Getting Started
 
+Current worktree: unpublished `0.1.1` post-migration candidate. See [release notes](releases/0.1.1.md). Prior release versions below describe historical baselines; new descriptors use `github.com/OrbitFabric`.
+
 This guide describes the normal consumer path for the `v0.1.0` OrbitFabric EDS-cFS Adapter release.
 
 Until `v0.1.0` is actually published, the repository remains pre-release. Do not treat repository source bytes as a substitute for published release assets.
@@ -61,7 +63,7 @@ sha256sum -c SHA256SUMS
 The canonical Adapter Source Coordinate is:
 
 ```text
-github.com/FAROTECH:orbitfabric/eds-cfs
+github.com/OrbitFabric:orbitfabric/eds-cfs
 ```
 
 A Project Lock is project-owned consumer state and is not published as an adapter release asset.

@@ -1,5 +1,7 @@
 # OrbitFabric EDS-cFS Adapter
 
+Candidate `0.1.1` is unpublished and awaits review. See [candidate release notes](docs/releases/0.1.1.md). New releases use the canonical `github.com/OrbitFabric` authority.
+
 `orbitfabric-eds-cfs-adapter` projects OrbitFabric mission contracts into CCSDS Electronic Data Sheets and carries that contract into the native NASA EdsLib / cFS integration lane.
 
 The adapter is deliberately a bridge, not a replacement for cFS mission architecture. OrbitFabric owns mission-level semantics, the Projection Profile owns explicit target binding, the selected cFS mission owns concrete topic allocation, and EdsLib / MissionLib / cFE remain authoritative for native realization and runtime behavior.
@@ -277,7 +279,7 @@ Python package              orbitfabric_eds_cfs_adapter
 console command             orbitfabric-eds-cfs
 adapter / integration id    orbitfabric-eds-cfs
 operation                   eds_cfs_projection
-source coordinate           github.com/FAROTECH:orbitfabric/eds-cfs
+source coordinate           github.com/OrbitFabric:orbitfabric/eds-cfs
 version                     0.1.0
 ```
 
