@@ -34,6 +34,17 @@ cp tests/fixtures/p0_b3/profile.yaml "$reference/profile.yaml"
 cp tests/fixtures/p0_b6/expected.xml "$reference/expected.xml"
 cp tests/fixtures/p0_b7/expected.json "$reference/expected-traceability.json"
 cp tests/fixtures/p0_b8/expected.json "$reference/expected-result.json"
+# Derive the current expected result without changing the retained historical file.
+python - "$reference/expected-result.json" <<'PY_VERSION'
+import json
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+value = json.loads(path.read_bytes())
+assert value["adapter"]["version"] == "0.1.0"
+value["adapter"]["version"] = "0.1.1"
+path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+PY_VERSION
 
 orbitfabric export integration-input-set "$mission_workspace" \
   --output-dir "$core_input"
@@ -211,4 +222,4 @@ printf '%s\n' \
   "installed execution independent of checkout src/: PASS" \
   "B6 installed bytes match retained golden: PASS" \
   "B7 installed bytes match retained golden: PASS" \
-  "B8 installed bytes match retained release golden: PASS"
+  "B8 installed bytes match historical golden plus exact version delta: PASS"
