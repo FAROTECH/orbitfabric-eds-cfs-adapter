@@ -34,6 +34,17 @@ cp tests/fixtures/p0_b3/profile.yaml "$reference/profile.yaml"
 cp tests/fixtures/p0_b6/expected.xml "$reference/expected.xml"
 cp tests/fixtures/p0_b7/expected.json "$reference/expected-traceability.json"
 cp tests/fixtures/p0_b8/expected.json "$reference/expected-result.json"
+# Derive the current expected result without changing the retained historical file.
+python - "$reference/expected-result.json" <<'PY_VERSION'
+import json
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+value = json.loads(path.read_bytes())
+assert value["adapter"]["version"] == "0.1.0"
+value["adapter"]["version"] = "0.1.1"
+path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+PY_VERSION
 
 orbitfabric export integration-input-set "$mission_workspace" \
   --output-dir "$core_input"
@@ -58,11 +69,11 @@ from pathlib import Path
 payload = json.loads(Path(os.environ["DESCRIPTOR"]).read_text(encoding="utf-8"))
 assert payload["kind"] == "orbitfabric.adapter_release"
 assert payload["source_coordinate"] == {
-    "authority": "github.com/FAROTECH",
+    "authority": "github.com/OrbitFabric",
     "publisher": "orbitfabric",
     "name": "eds-cfs",
 }
-assert payload["release_version"] == "0.1.0"
+assert payload["release_version"] == "0.1.1"
 assert len(payload["artifacts"]) == 1
 assert payload["artifacts"][0]["artifact_type"] == "python-wheel"
 PY
@@ -161,7 +172,7 @@ assert actual_files == expected_files
 result = json.loads((output / "integration_result.json").read_text(encoding="utf-8"))
 assert result["result"] == "succeeded"
 assert result["operation"] == {"id": "eds_cfs_projection"}
-assert result["adapter"] == {"id": "orbitfabric-eds-cfs", "version": "0.1.0"}
+assert result["adapter"] == {"id": "orbitfabric-eds-cfs", "version": "0.1.1"}
 assert result["inputs"]["operation_inputs"] == []
 assert result["inputs"]["profile"]["sha256"] == hashlib.sha256(
     (reference / "profile.yaml").read_bytes()
@@ -211,4 +222,4 @@ printf '%s\n' \
   "installed execution independent of checkout src/: PASS" \
   "B6 installed bytes match retained golden: PASS" \
   "B7 installed bytes match retained golden: PASS" \
-  "B8 installed bytes match retained release golden: PASS"
+  "B8 installed bytes match historical golden plus exact version delta: PASS"

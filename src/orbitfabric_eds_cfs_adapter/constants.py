@@ -6,10 +6,10 @@ OPERATION_ID = "eds_cfs_projection"
 DISTRIBUTION_NAME = "orbitfabric-eds-cfs-adapter"
 CONSOLE_COMMAND = "orbitfabric-eds-cfs"
 PYTHON_PACKAGE = "orbitfabric_eds_cfs_adapter"
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 SOURCE_COORDINATE = {
-    "authority": "github.com/FAROTECH",
+    "authority": "github.com/OrbitFabric",
     "publisher": "orbitfabric",
     "name": "eds-cfs",
 }
